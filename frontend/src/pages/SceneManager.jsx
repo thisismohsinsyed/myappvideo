@@ -229,6 +229,12 @@ export default function SceneManager({ user }) {
       );
 
       if (response.ok) {
+        // Also create the actual video file from the image
+        const sceneData = scenes.find(s => s.scene_id === sceneId);
+        if (sceneData?.image_data) {
+          createSceneVideo(sceneId, sceneData.image_data);
+        }
+        
         setScenes((prev) =>
           prev.map((s) =>
             s.scene_id === sceneId
@@ -246,6 +252,30 @@ export default function SceneManager({ user }) {
       toast.error("Failed to generate video");
     } finally {
       setGeneratingVideos((prev) => ({ ...prev, [sceneId]: false }));
+    }
+  };
+
+  // Create actual video file from image
+  const createSceneVideo = async (sceneId, imageData) => {
+    setGeneratingSceneVideo(prev => ({ ...prev, [sceneId]: true }));
+    try {
+      const videoBlob = await createVideoFromImage(imageData, 10);
+      const videoUrl = URL.createObjectURL(videoBlob);
+      setSceneVideoUrls(prev => ({ ...prev, [sceneId]: { url: videoUrl, blob: videoBlob } }));
+    } catch (error) {
+      console.error("Error creating scene video:", error);
+    } finally {
+      setGeneratingSceneVideo(prev => ({ ...prev, [sceneId]: false }));
+    }
+  };
+
+  // Generate video for preview when clicking on a scene
+  const prepareVideoPreview = async (scene) => {
+    setVideoPreviewScene(scene);
+    
+    // If video URL doesn't exist yet, create it
+    if (!sceneVideoUrls[scene.scene_id] && scene.image_data) {
+      await createSceneVideo(scene.scene_id, scene.image_data);
     }
   };
 
