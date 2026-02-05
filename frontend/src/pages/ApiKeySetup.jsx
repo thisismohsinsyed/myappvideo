@@ -108,6 +108,31 @@ export default function ApiKeySetup({ user }) {
     }
   };
 
+  const handleDeleteApiKey = async () => {
+    if (!window.confirm("Are you sure you want to delete your API key? You won't be able to generate images or videos until you add a new one.")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`${API}/settings/api-key`, {
+        method: "DELETE",
+        credentials: "include",
+      });
+
+      if (response.ok) {
+        toast.success("API key deleted");
+        setHasKey(false);
+        setSelectedModel("");
+        setModels([]);
+      } else {
+        toast.error("Failed to delete API key");
+      }
+    } catch (error) {
+      console.error("Error deleting API key:", error);
+      toast.error("Failed to delete API key");
+    }
+  };
+
   const handleSelectModel = async (model) => {
     setSelectedModel(model);
     try {
