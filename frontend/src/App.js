@@ -25,15 +25,21 @@ const AuthCallback = () => {
     hasProcessed.current = true;
 
     const processAuth = async () => {
+      // Get hash from window.location directly to ensure we get the latest value
       const hash = window.location.hash;
+      console.log("Auth callback - hash:", hash);
+      
       const sessionId = hash.split("session_id=")[1]?.split("&")[0];
+      console.log("Auth callback - sessionId:", sessionId);
 
       if (!sessionId) {
+        console.log("No session ID found, redirecting to home");
         navigate("/");
         return;
       }
 
       try {
+        console.log("Calling auth/session endpoint...");
         const response = await fetch(`${API}/auth/session`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -41,12 +47,17 @@ const AuthCallback = () => {
           body: JSON.stringify({ session_id: sessionId }),
         });
 
+        console.log("Auth response status:", response.status);
+        
         if (response.ok) {
           const user = await response.json();
+          console.log("Auth success, user:", user.email);
           // Clear the hash and navigate to dashboard
-          window.history.replaceState(null, "", window.location.pathname);
-          navigate("/dashboard", { state: { user } });
+          window.history.replaceState(null, "", "/dashboard");
+          navigate("/dashboard", { state: { user }, replace: true });
         } else {
+          const errorData = await response.json();
+          console.error("Auth failed:", errorData);
           navigate("/");
         }
       } catch (error) {
