@@ -507,7 +507,10 @@ export default function SceneManager({ user }) {
     }
 
     setAssembling(true);
+    setGeneratingFinalVideo(true);
+    
     try {
+      // First call backend to update status
       const response = await fetch(
         `${API}/projects/${projectId}/assemble`,
         { method: "POST", credentials: "include" }
@@ -516,6 +519,32 @@ export default function SceneManager({ user }) {
       if (response.ok) {
         const data = await response.json();
         setProject((prev) => ({ ...prev, status: "completed" }));
+        
+        // Now create the actual combined video
+        toast.info("Creating final video file...");
+        
+        // Ensure all scene videos are created
+        const videosToCreate = [];
+        for (const scene of approvedVideos) {
+          if (!sceneVideoUrls[scene.scene_id] && scene.image_data) {
+            const videoBlob = await createVideoFromImage(scene.image_data, 10);
+            const videoUrl = URL.createObjectURL(videoBlob);
+            setSceneVideoUrls(prev => ({ ...prev, [scene.scene_id]: { url: videoUrl, blob: videoBlob } }));
+            videosToCreate.push({ blob: videoBlob, duration: 10 });
+          } else if (sceneVideoUrls[scene.scene_id]) {
+            videosToCreate.push({ blob: sceneVideoUrls[scene.scene_id].blob, duration: 10 });
+          }
+        }
+        
+        // Combine all videos
+        if (videosToCreate.length > 0) {
+          const combinedBlob = await combineVideos(videosToCreate);
+          const combinedUrl = URL.createObjectURL(combinedBlob);
+          setFinalVideoUrl(combinedUrl);
+          setFinalVideoBlob(combinedBlob);
+        }
+        
+        setShowFinalVideoDialog(true);
         toast.success(`Final video assembled! ${data.scenes_count} clips, ${data.total_duration} seconds.`);
       } else {
         const error = await response.json();
