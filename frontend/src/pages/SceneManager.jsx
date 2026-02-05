@@ -911,7 +911,7 @@ export default function SceneManager({ user }) {
                           <div className="grid md:grid-cols-2">
                             <div 
                               className="relative aspect-video bg-black cursor-pointer group"
-                              onClick={() => setVideoPreviewScene(scene)}
+                              onClick={() => prepareVideoPreview(scene)}
                               data-testid={`video-preview-${scene.scene_id}`}
                             >
                               {scene.image_data && (
@@ -919,11 +919,15 @@ export default function SceneManager({ user }) {
                               )}
                               <div className="absolute inset-0 flex items-center justify-center">
                                 <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
-                                  <Play className="w-7 h-7 text-purple-600 ml-1" />
+                                  {generatingSceneVideo[scene.scene_id] ? (
+                                    <Loader2 className="w-6 h-6 text-purple-600 animate-spin" />
+                                  ) : (
+                                    <Play className="w-7 h-7 text-purple-600 ml-1" />
+                                  )}
                                 </div>
                               </div>
                               <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                                <span className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">Click to Preview</span>
+                                <span className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">Click to Play</span>
                               </div>
                               {!scene.video_approved && (
                                 <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}>
@@ -941,10 +945,17 @@ export default function SceneManager({ user }) {
                             </div>
                             <CardContent className="p-4">
                               <h4 className="font-semibold mb-1">Scene {scene.scene_number}</h4>
-                              <p className="text-sm text-muted-foreground line-clamp-3 mb-2">{scene.description}</p>
-                              <Button size="sm" variant="outline" onClick={() => setVideoPreviewScene(scene)}>
-                                <Play className="w-3 h-3 mr-1" /> Preview Video
-                              </Button>
+                              <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{scene.description}</p>
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="outline" onClick={() => prepareVideoPreview(scene)}>
+                                  <Play className="w-3 h-3 mr-1" /> Play
+                                </Button>
+                                {sceneVideoUrls[scene.scene_id] && (
+                                  <Button size="sm" variant="ghost" onClick={() => handleDownloadSceneVideo(scene.scene_id, scene.scene_number)}>
+                                    <Download className="w-3 h-3" />
+                                  </Button>
+                                )}
+                              </div>
                             </CardContent>
                           </div>
                         </Card>
