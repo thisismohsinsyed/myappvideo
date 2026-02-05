@@ -1,0 +1,183 @@
+{
+  "identity": {
+    "name": "E1",
+    "role": "Creative Designer",
+    "tone": "Professional, Cinematic, Minimalist, Efficient",
+    "principles": [
+      "Fusion over Imitation",
+      "Emotion First",
+      "Content is King",
+      "Zoom In",
+      "Negative Space",
+      "Contrast"
+    ]
+  },
+  "application": {
+    "name": "AI Video Generator",
+    "type": "SaaS Web App",
+    "theme": "Light (Clean/Minimal)",
+    "target_audience": [
+      "Content Creators",
+      "Video Marketers",
+      "Indie Filmmakers"
+    ]
+  },
+  "design_system": {
+    "typography": {
+      "font_family": {
+        "headings": "Manrope, sans-serif",
+        "body": "Inter, sans-serif",
+        "mono": "JetBrains Mono, monospace"
+      },
+      "scale": {
+        "h1": "text-4xl md:text-6xl font-bold tracking-tight",
+        "h2": "text-3xl md:text-4xl font-semibold tracking-tight",
+        "h3": "text-2xl font-semibold tracking-tight",
+        "body_large": "text-lg leading-relaxed",
+        "body_base": "text-base leading-relaxed",
+        "caption": "text-sm text-muted-foreground"
+      }
+    },
+    "colors": {
+      "palette": {
+        "background": "#FFFFFF",
+        "foreground": "#0F172A",
+        "primary": "#4F46E5",
+        "primary_foreground": "#FFFFFF",
+        "secondary": "#F1F5F9",
+        "secondary_foreground": "#0F172A",
+        "muted": "#F8FAFC",
+        "muted_foreground": "#64748B",
+        "accent": "#EEF2FF",
+        "accent_foreground": "#4F46E5",
+        "border": "#E2E8F0",
+        "input": "#E2E8F0",
+        "ring": "#4F46E5"
+      },
+      "usage": {
+        "primary_action": "bg-primary text-primary-foreground hover:bg-primary/90",
+        "secondary_action": "bg-secondary text-secondary-foreground hover:bg-secondary/80",
+        "ghost_action": "hover:bg-accent hover:text-accent-foreground",
+        "destructive": "bg-red-500 text-white hover:bg-red-600"
+      }
+    },
+    "spacing": {
+      "container_padding": "p-6 md:p-12",
+      "section_gap": "gap-8 md:gap-16",
+      "element_gap": "gap-4",
+      "border_radius": {
+        "default": "rounded-lg",
+        "card": "rounded-xl",
+        "button": "rounded-md"
+      }
+    },
+    "shadows": {
+      "card": "shadow-sm hover:shadow-md transition-shadow duration-200",
+      "dropdown": "shadow-lg border border-border/50",
+      "focus": "ring-2 ring-primary/20 ring-offset-2"
+    }
+  },
+  "layout_strategies": {
+    "marketing_page": {
+      "grid": "Bento Grid (Mode A)",
+      "hero": "Centered typography with large input simulation or split view with cinematic image",
+      "features": "Asymmetrical grid with large icons and generous whitespace"
+    },
+    "dashboard": {
+      "structure": "Sidebar navigation (collapsible) + Main Content Area",
+      "grid": "High Density Grid (Mode B) for project lists",
+      "card_style": "Flat background, 1px subtle border, no shadow by default"
+    },
+    "editor": {
+      "structure": "Split view: Script Input (Left) vs Scene List/Preview (Right)",
+      "focus_mode": "Minimalist text area with floating toolbar"
+    }
+  },
+  "components": {
+    "buttons": {
+      "default": "h-10 px-4 py-2",
+      "lg": "h-12 px-8 text-lg",
+      "icon": "h-10 w-10"
+    },
+    "inputs": {
+      "default": "h-10 bg-background border-input focus:ring-2 focus:ring-primary/20",
+      "large": "h-14 text-lg px-6"
+    },
+    "cards": {
+      "default": "bg-card text-card-foreground border border-border shadow-sm"
+    },
+    "dialogs": {
+      "overlay": "bg-black/20 backdrop-blur-sm",
+      "content": "bg-background border border-border shadow-lg sm:rounded-lg"
+    }
+  },
+  "visual_enhancers": {
+    "glassmorphism": "bg-white/70 backdrop-blur-xl border border-white/20 shadow-sm",
+    "gradients": "Subtle mesh gradients for hero backgrounds (e.g., from-indigo-50 to-white)",
+    "textures": "Subtle noise overlay (opacity 0.02) to reduce digital flatness",
+    "motion": {
+      "hover": "transition-all duration-200 ease-out hover:-translate-y-0.5",
+      "enter": "animate-in fade-in slide-in-from-bottom-4 duration-500"
+    }
+  },
+  "assets": {
+    "images": [
+      {
+        "category": "hero_background",
+        "url": "https://images.unsplash.com/photo-1576987212553-c43b8e44bb1f?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzMzV8MHwxfHNlYXJjaHwyfHxjaW5lbWF0aWMlMjBmaWxtJTIwcHJvZHVjdGlvbiUyMHNldCUyMGxpZ2h0aW5nfGVufDB8fHx8MTc3MDMxNjg0Mnww&ixlib=rb-4.1.0&q=85",
+        "description": "Woman standing near video camera, cinematic lighting. Use for Hero section background or split view."
+      },
+      {
+        "category": "workspace_feature",
+        "url": "https://images.unsplash.com/photo-1492619193369-af2352531443?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwyfHxtb2Rlcm4lMjB2aWRlbyUyMGVkaXRpbmclMjB3b3Jrc3BhY2UlMjBjcmVhdGl2ZXxlbnwwfHx8fDE3NzAzMTY4NDZ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Clean iMac workspace. Use for 'Professional Tools' feature section."
+      },
+      {
+        "category": "ai_generation_placeholder",
+        "url": "https://images.unsplash.com/photo-1764438234488-af3923faf0cd?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjAzNDR8MHwxfHNlYXJjaHwxfHxhYnN0cmFjdCUyMGRpZ2l0YWwlMjBjcmVhdGl2ZSUyMGZsb3clMjBhcnR8ZW58MHx8fHwxNzcwMzE2ODUxfDA&ixlib=rb-4.1.0&q=85",
+        "description": "Abstract glowing shape. Use as placeholder for 'Generating...' state or AI feature card."
+      },
+      {
+        "category": "filmmaker_vibe",
+        "url": "https://images.unsplash.com/photo-1758553026412-bc1da0ebd366?crop=entropy&cs=srgb&fm=jpg&ixid=M3w4NjA1ODh8MHwxfHNlYXJjaHwxfHxtb2Rlcm4lMjB2aWRlbyUyMGVkaXRpbmclMjB3b3Jrc3BhY2UlMjBjcmVhdGl2ZXxlbnwwfHx8fDE3NzAzMTY4NDZ8MA&ixlib=rb-4.1.0&q=85",
+        "description": "Professional editing setup. Use for 'For Creators' section."
+      }
+    ],
+    "icons": "Use 'lucide-react' for all UI icons. Use '@phosphor-icons/react' for feature illustrations if needed."
+  },
+  "instructions_to_main_agent": {
+    "general": [
+      "Follow the 'Light Theme' constraint strictly.",
+      "Use 'Manrope' for all headings and 'Inter' for body text.",
+      "Implement a 'Step-based' progress indicator for the video generation pipeline.",
+      "Ensure all interactive elements have 'data-testid' attributes.",
+      "Do NOT use generic 'Inter' for headings.",
+      "Do NOT use full-screen gradients; use subtle mesh gradients or solid colors.",
+      "Use 'sonner' for toast notifications.",
+      "Use 'lucide-react' for icons."
+    ],
+    "pages": {
+      "landing": "Create a high-impact hero section. Use the 'hero_background' image. Feature grid should use Bento layout.",
+      "dashboard": "Clean list of projects. Use a 'Create New' button with primary color.",
+      "script_editor": "Minimalist text area. Auto-save indicator. Split view for scene preview.",
+      "scene_manager": "Card-based layout. Each card represents a scene with 'Edit', 'Regenerate Image', 'Preview Video' actions.",
+      "video_generation": "Show progress clearly. Use the 'ai_generation_placeholder' image while processing."
+    },
+    "anti_patterns": [
+      "No purple or teal for CTAs (Use Indigo/Violet).",
+      "No center-everything layouts (Use asymmetry).",
+      "No gradient overload.",
+      "No 'Inter' for headings."
+    ]
+  },
+  "universal_guidelines": [
+    "Create depth through layered design elements with z-index hierarchy.",
+    "Use glass-morphism effects with backdrop filters (12-24px blur) for overlays.",
+    "Do NOT apply universal transition (e.g., transition: all).",
+    "Do NOT center align the app container globally.",
+    "Every interaction needs micro-animations (hover, focus, active).",
+    "Use 2-3x more spacing than typical designs.",
+    "Components MUST use named exports.",
+    "Pages MUST use default exports."
+  ]
+}
