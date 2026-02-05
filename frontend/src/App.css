@@ -123,6 +123,12 @@
     @apply border-green-200 bg-green-50;
 }
 
+/* Video preview progress animation */
+@keyframes progress {
+  0% { width: 0%; }
+  100% { width: 100%; }
+}
+
 /* Responsive adjustments */
 @media (max-width: 768px) {
     .sidebar {
