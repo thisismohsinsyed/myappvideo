@@ -87,6 +87,11 @@ const ProtectedRoute = ({ children }) => {
   const location = useLocation();
 
   useEffect(() => {
+    // If there's a session_id in hash, let AuthCallback handle it
+    if (window.location.hash.includes("session_id=")) {
+      return;
+    }
+
     // If user data passed from AuthCallback, use it
     if (location.state?.user) {
       setUser(location.state.user);
@@ -115,6 +120,7 @@ const ProtectedRoute = ({ children }) => {
     };
 
     checkAuth();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [navigate, location.state]);
 
   if (isAuthenticated === null) {
