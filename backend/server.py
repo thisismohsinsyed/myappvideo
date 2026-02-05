@@ -1004,32 +1004,6 @@ async def get_scene_video(project_id: str, scene_id: str, user: User = Depends(g
         "video_data": video_data,
         "video_status": scene.get("video_status", "unknown")
     }
-        
-        await asyncio.sleep(2)  # Simulate processing time
-        
-        # Update scene with placeholder video status
-        await db.scenes.update_one(
-            {"scene_id": scene_id},
-            {"$set": {
-                "video_status": "completed",
-                "video_url": f"/api/projects/{project_id}/scenes/{scene_id}/video"
-            }}
-        )
-        
-        return {
-            "success": True,
-            "scene_id": scene_id,
-            "video_status": "completed",
-            "message": "Video generation simulated. Note: Full Veo 3.1 integration requires Google AI Studio Pro/Ultra access."
-        }
-        
-    except Exception as e:
-        await db.scenes.update_one(
-            {"scene_id": scene_id},
-            {"$set": {"video_status": "failed"}}
-        )
-        logger.error(f"Video generation error: {e}")
-        raise HTTPException(status_code=500, detail=f"Video generation failed: {str(e)}")
 
 @api_router.post("/projects/{project_id}/generate-all-videos")
 async def generate_all_videos(project_id: str, user: User = Depends(get_current_user)):
