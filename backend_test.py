@@ -6,6 +6,7 @@ import json
 import time
 from datetime import datetime, timezone, timedelta
 import uuid
+import subprocess
 
 class ScriptifyAPITester:
     def __init__(self, base_url="https://scriptify-48.preview.emergentagent.com/api"):
@@ -13,7 +14,7 @@ class ScriptifyAPITester:
         self.session_token = None
         self.user_id = None
         self.project_id = None
-        self.scene_id = None
+        self.scene_ids = []
         self.tests_run = 0
         self.tests_passed = 0
         self.failed_tests = []
