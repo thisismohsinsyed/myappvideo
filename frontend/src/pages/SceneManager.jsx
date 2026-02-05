@@ -259,11 +259,17 @@ export default function SceneManager({ user }) {
   const createSceneVideo = async (sceneId, imageData) => {
     setGeneratingSceneVideo(prev => ({ ...prev, [sceneId]: true }));
     try {
-      const videoBlob = await createVideoFromImage(imageData, 10);
+      console.log('Creating video for scene:', sceneId);
+      const videoBlob = await createVideoFromImageSimple(imageData, 10);
+      console.log('Video blob created:', videoBlob.size, 'bytes');
       const videoUrl = URL.createObjectURL(videoBlob);
+      console.log('Video URL:', videoUrl);
       setSceneVideoUrls(prev => ({ ...prev, [sceneId]: { url: videoUrl, blob: videoBlob } }));
+      return { url: videoUrl, blob: videoBlob };
     } catch (error) {
       console.error("Error creating scene video:", error);
+      toast.error("Failed to create video preview");
+      return null;
     } finally {
       setGeneratingSceneVideo(prev => ({ ...prev, [sceneId]: false }));
     }
