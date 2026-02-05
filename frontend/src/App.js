@@ -136,12 +136,27 @@ const ProtectedRoute = ({ children }) => {
 // Router Component
 const AppRouter = () => {
   const location = useLocation();
+  const [checkingAuth, setCheckingAuth] = useState(true);
+  const [hasSessionId, setHasSessionId] = useState(false);
+
+  useEffect(() => {
+    // Check for session_id in hash on mount and location changes
+    const hash = window.location.hash;
+    const hasSession = hash.includes("session_id=");
+    console.log("AppRouter - checking hash:", hash, "hasSession:", hasSession);
+    setHasSessionId(hasSession);
+    setCheckingAuth(false);
+  }, [location]);
 
   // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-  // Check URL fragment for session_id synchronously - check both hash and full URL
-  const hasSessionId = location.hash?.includes("session_id=") || 
-                       window.location.hash?.includes("session_id=");
-  
+  if (checkingAuth) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+      </div>
+    );
+  }
+
   if (hasSessionId) {
     return <AuthCallback />;
   }
