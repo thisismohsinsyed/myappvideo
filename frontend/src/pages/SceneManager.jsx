@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import {
   ArrowLeft, 
   ArrowRight,
   Play,
+  Pause,
   RefreshCw,
   Download,
   Image as ImageIcon,
@@ -38,10 +39,14 @@ import {
   Plus,
   Trash2,
   Edit3,
-  Save
+  Save,
+  Volume2,
+  VolumeX,
+  Maximize
 } from "lucide-react";
 import { toast } from "sonner";
 import { API } from "@/App";
+import { createVideoFromImage, combineVideos, downloadBlob } from "@/utils/videoUtils";
 
 // Step definitions
 const STEPS = [
