@@ -554,6 +554,26 @@ export default function SceneManager({ user }) {
       toast.error("Failed to assemble video");
     } finally {
       setAssembling(false);
+      setGeneratingFinalVideo(false);
+    }
+  };
+
+  // Download final video
+  const handleDownloadFinalVideo = () => {
+    if (finalVideoBlob) {
+      downloadBlob(finalVideoBlob, `${project?.title || 'video'}_final.webm`);
+      toast.success("Video download started!");
+    } else {
+      toast.error("No video available to download");
+    }
+  };
+
+  // Download individual scene video
+  const handleDownloadSceneVideo = (sceneId, sceneNumber) => {
+    const videoData = sceneVideoUrls[sceneId];
+    if (videoData?.blob) {
+      downloadBlob(videoData.blob, `scene_${sceneNumber}.webm`);
+      toast.success("Scene video download started!");
     }
   };
 
