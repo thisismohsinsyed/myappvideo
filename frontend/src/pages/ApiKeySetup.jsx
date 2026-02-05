@@ -19,7 +19,8 @@ import {
   ExternalLink,
   Sparkles,
   Film,
-  Loader2
+  Loader2,
+  Trash2
 } from "lucide-react";
 import { toast } from "sonner";
 import { API } from "@/App";
