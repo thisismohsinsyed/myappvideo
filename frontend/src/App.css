@@ -1,34 +1,135 @@
-.App-logo {
-    height: 40vmin;
-    pointer-events: none;
+/* App-specific styles */
+
+/* Hero gradient background */
+.hero-gradient {
+    background: linear-gradient(135deg, #EEF2FF 0%, #FFFFFF 50%, #F1F5F9 100%);
 }
 
-@media (prefers-reduced-motion: no-preference) {
-    .App-logo {
-        animation: App-logo-spin infinite 20s linear;
+/* Card hover effect */
+.card-hover {
+    @apply transition-all duration-200 ease-out;
+}
+
+.card-hover:hover {
+    @apply -translate-y-0.5 shadow-md;
+}
+
+/* Scene card */
+.scene-card {
+    @apply bg-card border border-border rounded-xl overflow-hidden transition-all duration-200;
+}
+
+.scene-card:hover {
+    @apply shadow-lg border-primary/20;
+}
+
+/* Progress bar animation */
+.progress-bar-animated {
+    background: linear-gradient(
+        90deg,
+        hsl(var(--primary)) 0%,
+        hsl(var(--primary) / 0.7) 50%,
+        hsl(var(--primary)) 100%
+    );
+    background-size: 200% 100%;
+    animation: progress-shimmer 2s linear infinite;
+}
+
+@keyframes progress-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Image placeholder skeleton */
+.image-skeleton {
+    @apply bg-muted animate-pulse rounded-lg;
+    background: linear-gradient(90deg, hsl(var(--muted)) 25%, hsl(var(--muted) / 0.7) 50%, hsl(var(--muted)) 75%);
+    background-size: 200% 100%;
+    animation: skeleton-shimmer 1.5s ease-in-out infinite;
+}
+
+@keyframes skeleton-shimmer {
+    0% { background-position: 200% 0; }
+    100% { background-position: -200% 0; }
+}
+
+/* Video preview overlay */
+.video-overlay {
+    @apply absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 transition-opacity duration-200;
+}
+
+.scene-card:hover .video-overlay {
+    @apply opacity-100;
+}
+
+/* Textarea focus */
+.script-textarea {
+    @apply min-h-[300px] resize-none font-mono text-sm leading-relaxed;
+}
+
+.script-textarea:focus {
+    @apply ring-2 ring-primary/20 border-primary;
+}
+
+/* Status badge */
+.status-badge {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium;
+}
+
+.status-badge.draft {
+    @apply bg-muted text-muted-foreground;
+}
+
+.status-badge.processing {
+    @apply bg-amber-100 text-amber-700;
+}
+
+.status-badge.completed {
+    @apply bg-green-100 text-green-700;
+}
+
+/* Sidebar */
+.sidebar {
+    @apply fixed left-0 top-0 h-full w-64 bg-card border-r border-border p-4 z-40;
+}
+
+.sidebar-link {
+    @apply flex items-center gap-3 px-3 py-2.5 rounded-lg text-muted-foreground transition-colors duration-200;
+}
+
+.sidebar-link:hover {
+    @apply bg-accent text-accent-foreground;
+}
+
+.sidebar-link.active {
+    @apply bg-primary/10 text-primary font-medium;
+}
+
+/* Main content area with sidebar */
+.main-with-sidebar {
+    @apply ml-64;
+}
+
+/* Generation step */
+.generation-step {
+    @apply flex items-center gap-4 p-4 border border-border rounded-lg;
+}
+
+.generation-step.active {
+    @apply border-primary bg-primary/5;
+}
+
+.generation-step.completed {
+    @apply border-green-200 bg-green-50;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .sidebar {
+        @apply w-full h-auto relative border-r-0 border-b;
     }
-}
-
-.App-header {
-    background-color: #0f0f10;
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    font-size: calc(10px + 2vmin);
-    color: white;
-}
-
-.App-link {
-    color: #61dafb;
-}
-
-@keyframes App-logo-spin {
-    from {
-        transform: rotate(0deg);
-    }
-    to {
-        transform: rotate(360deg);
+    
+    .main-with-sidebar {
+        @apply ml-0;
     }
 }
