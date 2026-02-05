@@ -76,8 +76,10 @@ class Scene(BaseModel):
     action_summary: str = ""
     image_url: Optional[str] = None
     image_base64: Optional[str] = None
+    image_approved: bool = False  # User approval for image
     video_url: Optional[str] = None
     video_status: str = "pending"  # pending, generating, completed, failed
+    video_approved: bool = False  # User approval for video
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class Character(BaseModel):
@@ -115,6 +117,13 @@ class SceneUpdate(BaseModel):
     characters: Optional[List[str]] = None
     setting: Optional[str] = None
     action_summary: Optional[str] = None
+    image_approved: Optional[bool] = None
+    video_approved: Optional[bool] = None
+
+class SceneApprovalRequest(BaseModel):
+    scene_ids: List[str]
+    approval_type: str  # "image" or "video"
+    approved: bool
 
 class SceneRegenerateRequest(BaseModel):
     scene_id: str
@@ -798,7 +807,7 @@ async def generate_scene_video(project_id: str, scene_id: str, user: User = Depe
 
 @api_router.post("/projects/{project_id}/generate-all-videos")
 async def generate_all_videos(project_id: str, user: User = Depends(get_current_user)):
-    """Generate videos for all scenes"""
+    """Generate videos for all APPROVED scenes only"""
     if not user.gemini_api_key:
         raise HTTPException(status_code=400, detail="API key not set")
     
@@ -810,10 +819,14 @@ async def generate_all_videos(project_id: str, user: User = Depends(get_current_
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
+    # Only get scenes with APPROVED images
     scenes = await db.scenes.find(
-        {"project_id": project_id, "image_generated": True},
+        {"project_id": project_id, "image_generated": True, "image_approved": True},
         {"_id": 0}
     ).sort("scene_number", 1).to_list(100)
+    
+    if not scenes:
+        raise HTTPException(status_code=400, detail="No approved images to generate videos from. Please approve scene images first.")
     
     results = []
     for scene in scenes:
@@ -831,11 +844,43 @@ async def generate_all_videos(project_id: str, user: User = Depends(get_current_
     
     return {"results": results}
 
+@api_router.post("/projects/{project_id}/scenes/approve")
+async def approve_scenes(project_id: str, request: SceneApprovalRequest, user: User = Depends(get_current_user)):
+    """Bulk approve/reject scene images or videos"""
+    project = await db.projects.find_one(
+        {"project_id": project_id, "user_id": user.user_id},
+        {"_id": 0}
+    )
+    
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    field = "image_approved" if request.approval_type == "image" else "video_approved"
+    
+    await db.scenes.update_many(
+        {"project_id": project_id, "scene_id": {"$in": request.scene_ids}},
+        {"$set": {field: request.approved}}
+    )
+    
+    # Update project status based on approvals
+    if request.approval_type == "image" and request.approved:
+        await db.projects.update_one(
+            {"project_id": project_id},
+            {"$set": {"status": "images_approved", "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    elif request.approval_type == "video" and request.approved:
+        await db.projects.update_one(
+            {"project_id": project_id},
+            {"$set": {"status": "videos_approved", "updated_at": datetime.now(timezone.utc).isoformat()}}
+        )
+    
+    return {"message": f"Updated {len(request.scene_ids)} scenes", "approved": request.approved}
+
 # ==================== FINAL VIDEO ASSEMBLY ====================
 
 @api_router.post("/projects/{project_id}/assemble")
 async def assemble_final_video(project_id: str, user: User = Depends(get_current_user)):
-    """Assemble all scene videos into final video (placeholder)"""
+    """Assemble all APPROVED scene videos into final video"""
     if not user.gemini_api_key:
         raise HTTPException(status_code=400, detail="API key not set")
     
@@ -847,13 +892,17 @@ async def assemble_final_video(project_id: str, user: User = Depends(get_current
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
+    # Only assemble APPROVED videos
     scenes = await db.scenes.find(
-        {"project_id": project_id, "video_status": "completed"},
+        {"project_id": project_id, "video_status": "completed", "video_approved": True},
         {"_id": 0}
     ).sort("scene_number", 1).to_list(100)
     
     if not scenes:
-        raise HTTPException(status_code=400, detail="No completed scene videos to assemble")
+        raise HTTPException(status_code=400, detail="No approved video clips to assemble. Please approve video clips first.")
+    
+    # Calculate total duration (10 seconds per scene)
+    total_duration = len(scenes) * 10
     
     # Update project status
     await db.projects.update_one(
@@ -861,6 +910,8 @@ async def assemble_final_video(project_id: str, user: User = Depends(get_current
         {"$set": {
             "status": "completed",
             "final_video_url": f"/api/projects/{project_id}/final-video",
+            "final_video_scenes": len(scenes),
+            "final_video_duration": total_duration,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
@@ -869,13 +920,14 @@ async def assemble_final_video(project_id: str, user: User = Depends(get_current
         "success": True,
         "project_id": project_id,
         "scenes_count": len(scenes),
-        "message": "Video assembly simulated. Final video would be available for download.",
+        "total_duration": total_duration,
+        "message": f"Final video assembled from {len(scenes)} approved clips ({total_duration} seconds total).",
         "download_url": f"/api/projects/{project_id}/final-video"
     }
 
 @api_router.get("/projects/{project_id}/status")
 async def get_project_status(project_id: str, user: User = Depends(get_current_user)):
-    """Get detailed project generation status"""
+    """Get detailed project generation status with approval tracking"""
     project = await db.projects.find_one(
         {"project_id": project_id, "user_id": user.user_id},
         {"_id": 0}
@@ -891,16 +943,22 @@ async def get_project_status(project_id: str, user: User = Depends(get_current_u
     
     total_scenes = len(scenes)
     images_generated = sum(1 for s in scenes if s.get("image_generated"))
+    images_approved = sum(1 for s in scenes if s.get("image_approved"))
     videos_completed = sum(1 for s in scenes if s.get("video_status") == "completed")
+    videos_approved = sum(1 for s in scenes if s.get("video_approved"))
     
     return {
         "project": project,
         "progress": {
             "total_scenes": total_scenes,
             "images_generated": images_generated,
+            "images_approved": images_approved,
             "videos_completed": videos_completed,
+            "videos_approved": videos_approved,
             "images_progress": (images_generated / total_scenes * 100) if total_scenes > 0 else 0,
-            "videos_progress": (videos_completed / total_scenes * 100) if total_scenes > 0 else 0
+            "images_approval_progress": (images_approved / images_generated * 100) if images_generated > 0 else 0,
+            "videos_progress": (videos_completed / total_scenes * 100) if total_scenes > 0 else 0,
+            "videos_approval_progress": (videos_approved / videos_completed * 100) if videos_completed > 0 else 0
         }
     }
 
