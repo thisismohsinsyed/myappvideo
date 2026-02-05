@@ -1194,18 +1194,25 @@ export default function SceneManager({ user }) {
               <div className="aspect-video flex items-center justify-center">
                 <div className="text-center text-white">
                   <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin" />
-                  <p>Creating video from image...</p>
-                  <p className="text-sm text-white/60 mt-1">This may take a moment</p>
+                  <p>Creating 10-second video...</p>
+                  <p className="text-sm text-white/60 mt-1">Please wait, this takes about 10 seconds</p>
+                  <Progress className="w-48 mx-auto mt-4" value={50} />
                 </div>
               </div>
             ) : sceneVideoUrls[videoPreviewScene?.scene_id]?.url ? (
               <video
+                key={sceneVideoUrls[videoPreviewScene?.scene_id]?.url}
                 ref={videoRef}
                 src={sceneVideoUrls[videoPreviewScene?.scene_id]?.url}
-                className="w-full aspect-video"
+                className="w-full aspect-video bg-black"
                 controls
                 autoPlay
-                onError={(e) => console.error("Video error:", e)}
+                playsInline
+                onLoadedMetadata={(e) => console.log("Video loaded, duration:", e.target.duration)}
+                onError={(e) => {
+                  console.error("Video playback error:", e);
+                  toast.error("Video playback error");
+                }}
               >
                 Your browser does not support video playback.
               </video>
@@ -1214,6 +1221,7 @@ export default function SceneManager({ user }) {
                 <div className="text-center text-white">
                   <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin" />
                   <p>Preparing video...</p>
+                  <p className="text-sm text-white/60 mt-1">Initializing video generation</p>
                 </div>
               </div>
             ) : (
