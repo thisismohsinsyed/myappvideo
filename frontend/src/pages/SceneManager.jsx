@@ -86,6 +86,16 @@ export default function SceneManager({ user }) {
   const [newCharacterDialog, setNewCharacterDialog] = useState(false);
   const [videoPreviewScene, setVideoPreviewScene] = useState(null);
   
+  // Video playback states
+  const [sceneVideoUrls, setSceneVideoUrls] = useState({});
+  const [generatingSceneVideo, setGeneratingSceneVideo] = useState({});
+  const [finalVideoUrl, setFinalVideoUrl] = useState(null);
+  const [finalVideoBlob, setFinalVideoBlob] = useState(null);
+  const [generatingFinalVideo, setGeneratingFinalVideo] = useState(false);
+  const [showFinalVideoDialog, setShowFinalVideoDialog] = useState(false);
+  const videoRef = useRef(null);
+  const finalVideoRef = useRef(null);
+  
   // Form states
   const [editingCharacter, setEditingCharacter] = useState({});
   const [editingScene, setEditingScene] = useState({});
