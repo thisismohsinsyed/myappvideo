@@ -83,17 +83,41 @@ class ScriptifyAPITester:
         self.user_id = f"test_user_{timestamp}"
         self.session_token = f"test_session_{timestamp}"
         
-        # Create session request (simulating OAuth callback)
-        session_data = {
-            "session_id": f"test_session_id_{timestamp}"
-        }
-        
-        # Note: In real testing, we would need to create the user/session in MongoDB
-        # For now, we'll test the session endpoint with a mock session_id
-        self.log(f"Generated test user_id: {self.user_id}")
-        self.log(f"Generated session_token: {self.session_token}")
-        
-        return True
+        # Create user and session directly in MongoDB
+        try:
+            mongo_script = f"""
+            use('test_database');
+            db.users.insertOne({{
+                user_id: '{self.user_id}',
+                email: 'test.user.{timestamp}@example.com',
+                name: 'Test User {timestamp}',
+                picture: 'https://via.placeholder.com/150',
+                gemini_api_key: 'test_api_key_for_testing',
+                selected_model: 'gemini-3-pro-image-preview',
+                created_at: new Date()
+            }});
+            db.user_sessions.insertOne({{
+                user_id: '{self.user_id}',
+                session_token: '{self.session_token}',
+                expires_at: new Date(Date.now() + 7*24*60*60*1000),
+                created_at: new Date()
+            }});
+            """
+            
+            result = subprocess.run(['mongosh', '--eval', mongo_script], 
+                                  capture_output=True, text=True, timeout=30)
+            
+            if result.returncode == 0:
+                self.log(f"✅ Test user created: {self.user_id}")
+                self.log(f"✅ Session token: {self.session_token}")
+                return True
+            else:
+                self.log(f"❌ Failed to create test user: {result.stderr}", "ERROR")
+                return False
+                
+        except Exception as e:
+            self.log(f"❌ Error setting up test user: {e}", "ERROR")
+            return False
 
     def test_root_endpoint(self):
         """Test API root endpoint"""
