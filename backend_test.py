@@ -450,8 +450,8 @@ FADE OUT."""
 
 def main():
     """Main test execution"""
-    print("🚀 Starting Scriptify API Tests")
-    print("=" * 50)
+    print("🚀 Starting Scriptify AI Video Generation API Tests")
+    print("=" * 60)
     
     tester = ScriptifyAPITester()
     
@@ -463,11 +463,19 @@ def main():
     # Test CORS
     tester.test_cors_headers()
     
-    # Setup test user
-    tester.setup_test_user()
-    
-    # Run unauthenticated tests
+    # Run unauthenticated tests first
     tester.run_unauthenticated_tests()
+    
+    # Setup test user for authenticated tests
+    if tester.setup_test_user():
+        try:
+            # Run authenticated workflow tests
+            tester.run_authenticated_tests()
+        finally:
+            # Clean up test data
+            tester.cleanup_test_data()
+    else:
+        print("❌ Could not set up test user. Skipping authenticated tests.")
     
     # Print summary
     tester.print_summary()
