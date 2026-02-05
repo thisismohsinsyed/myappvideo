@@ -40,11 +40,12 @@ export default function Dashboard({ user }) {
   const [newProjectTitle, setNewProjectTitle] = useState("");
   const [createDialogOpen, setCreateDialogOpen] = useState(false);
   const [creating, setCreating] = useState(false);
-  const [apiKeyStatus, setApiKeyStatus] = useState({ has_key: false });
+  const [apiKeyStatus, setApiKeyStatus] = useState({ has_key: user?.gemini_api_key ? true : false });
 
   useEffect(() => {
     fetchProjects();
     checkApiKey();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const fetchProjects = async () => {
