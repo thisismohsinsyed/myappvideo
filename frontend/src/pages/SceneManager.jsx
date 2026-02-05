@@ -1160,60 +1160,43 @@ export default function SceneManager({ user }) {
       <Dialog open={!!videoPreviewScene} onOpenChange={() => setVideoPreviewScene(null)}>
         <DialogContent className="max-w-4xl">
           <DialogHeader>
-            <DialogTitle>Scene {videoPreviewScene?.scene_number} - Video Preview</DialogTitle>
+            <DialogTitle>Scene {videoPreviewScene?.scene_number} - Video Player</DialogTitle>
             <DialogDescription>{videoPreviewScene?.description}</DialogDescription>
           </DialogHeader>
           
           {/* Video Player Area */}
           <div className="relative bg-black rounded-lg overflow-hidden">
-            {videoPreviewScene?.image_data ? (
-              <div className="relative aspect-video">
-                {/* Simulated video with animated image */}
-                <img 
-                  src={`data:image/png;base64,${videoPreviewScene.image_data}`} 
-                  alt={`Scene ${videoPreviewScene?.scene_number}`} 
-                  className="w-full h-full object-cover"
-                />
-                
-                {/* Video overlay with play animation */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30">
-                  {/* Animated scan line effect to simulate video */}
-                  <div className="absolute inset-0 overflow-hidden">
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent animate-pulse" style={{ animationDuration: '2s' }} />
-                  </div>
-                  
-                  {/* Video controls overlay */}
-                  <div className="absolute bottom-0 left-0 right-0 p-4">
-                    <div className="flex items-center gap-3">
-                      <Button size="sm" variant="secondary" className="rounded-full w-10 h-10 p-0">
-                        <Play className="w-5 h-5 ml-0.5" />
-                      </Button>
-                      
-                      {/* Progress bar */}
-                      <div className="flex-1">
-                        <div className="h-1 bg-white/30 rounded-full overflow-hidden">
-                          <div className="h-full bg-white rounded-full w-0 animate-[progress_10s_linear_infinite]" 
-                               style={{ animation: 'progress 10s linear infinite' }} />
-                        </div>
-                      </div>
-                      
-                      <span className="text-white text-sm font-medium">0:10</span>
-                    </div>
-                  </div>
-                  
-                  {/* Scene info */}
-                  <div className="absolute top-4 left-4">
-                    <span className="px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded-full">
-                      Scene {videoPreviewScene?.scene_number}
-                    </span>
-                  </div>
+            {generatingSceneVideo[videoPreviewScene?.scene_id] ? (
+              <div className="aspect-video flex items-center justify-center">
+                <div className="text-center text-white">
+                  <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin" />
+                  <p>Creating video from image...</p>
+                  <p className="text-sm text-white/60 mt-1">This may take a moment</p>
+                </div>
+              </div>
+            ) : sceneVideoUrls[videoPreviewScene?.scene_id]?.url ? (
+              <video
+                ref={videoRef}
+                src={sceneVideoUrls[videoPreviewScene?.scene_id]?.url}
+                className="w-full aspect-video"
+                controls
+                autoPlay
+                onError={(e) => console.error("Video error:", e)}
+              >
+                Your browser does not support video playback.
+              </video>
+            ) : videoPreviewScene?.image_data ? (
+              <div className="aspect-video flex items-center justify-center">
+                <div className="text-center text-white">
+                  <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin" />
+                  <p>Preparing video...</p>
                 </div>
               </div>
             ) : (
               <div className="aspect-video flex items-center justify-center">
                 <div className="text-center text-white/70">
                   <Film className="w-12 h-12 mx-auto mb-2 opacity-50" />
-                  <p>No video preview available</p>
+                  <p>No video available</p>
                 </div>
               </div>
             )}
@@ -1237,26 +1220,98 @@ export default function SceneManager({ user }) {
             </div>
           </div>
           
-          {/* Note about simulated video */}
-          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
-            <p className="text-amber-800">
-              <strong>Note:</strong> This is a preview simulation. Full video playback requires Veo 3.1 API integration.
-            </p>
-          </div>
-          
-          <DialogFooter>
-            <Button variant="outline" onClick={() => { generateVideo(videoPreviewScene.scene_id); setVideoPreviewScene(null); }}>
-              <RefreshCw className="w-4 h-4 mr-2" /> Regenerate Video
+          <DialogFooter className="flex-col sm:flex-row gap-2">
+            {sceneVideoUrls[videoPreviewScene?.scene_id] && (
+              <Button variant="outline" onClick={() => handleDownloadSceneVideo(videoPreviewScene?.scene_id, videoPreviewScene?.scene_number)}>
+                <Download className="w-4 h-4 mr-2" /> Download Clip
+              </Button>
+            )}
+            <Button variant="outline" onClick={() => { generateVideo(videoPreviewScene?.scene_id); }}>
+              <RefreshCw className="w-4 h-4 mr-2" /> Regenerate
             </Button>
             {!videoPreviewScene?.video_approved && (
               <Button className="bg-green-600 hover:bg-green-700" onClick={() => { 
-                setSelectedForApproval(new Set([videoPreviewScene.scene_id])); 
+                setSelectedForApproval(new Set([videoPreviewScene?.scene_id])); 
                 handleApproveSelected("video", true); 
                 setVideoPreviewScene(null); 
               }}>
                 <Check className="w-4 h-4 mr-2" /> Approve Video
               </Button>
             )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Final Video Dialog */}
+      <Dialog open={showFinalVideoDialog} onOpenChange={setShowFinalVideoDialog}>
+        <DialogContent className="max-w-5xl">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CheckCircle2 className="w-6 h-6 text-green-500" />
+              Final Video Ready!
+            </DialogTitle>
+            <DialogDescription>
+              Your video has been assembled from {videosApproved} approved clips ({videosApproved * 10} seconds total)
+            </DialogDescription>
+          </DialogHeader>
+          
+          {/* Final Video Player */}
+          <div className="relative bg-black rounded-lg overflow-hidden">
+            {generatingFinalVideo ? (
+              <div className="aspect-video flex items-center justify-center">
+                <div className="text-center text-white">
+                  <Loader2 className="w-12 h-12 mx-auto mb-3 animate-spin" />
+                  <p>Creating final video...</p>
+                  <p className="text-sm text-white/60 mt-1">Combining all approved clips</p>
+                </div>
+              </div>
+            ) : finalVideoUrl ? (
+              <video
+                ref={finalVideoRef}
+                src={finalVideoUrl}
+                className="w-full aspect-video"
+                controls
+                autoPlay
+              >
+                Your browser does not support video playback.
+              </video>
+            ) : (
+              <div className="aspect-video flex items-center justify-center">
+                <div className="text-center text-white/70">
+                  <Film className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>Video not available</p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Video Stats */}
+          <div className="grid grid-cols-4 gap-4 text-sm">
+            <div className="p-3 bg-muted rounded-lg text-center">
+              <p className="text-2xl font-bold text-primary">{videosApproved}</p>
+              <p className="text-muted-foreground text-xs">Scenes</p>
+            </div>
+            <div className="p-3 bg-muted rounded-lg text-center">
+              <p className="text-2xl font-bold text-primary">{videosApproved * 10}s</p>
+              <p className="text-muted-foreground text-xs">Duration</p>
+            </div>
+            <div className="p-3 bg-muted rounded-lg text-center">
+              <p className="text-2xl font-bold text-primary">1080p</p>
+              <p className="text-muted-foreground text-xs">Resolution</p>
+            </div>
+            <div className="p-3 bg-muted rounded-lg text-center">
+              <p className="text-2xl font-bold text-green-500">Ready</p>
+              <p className="text-muted-foreground text-xs">Status</p>
+            </div>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowFinalVideoDialog(false)}>
+              Close
+            </Button>
+            <Button className="bg-green-600 hover:bg-green-700" onClick={handleDownloadFinalVideo} disabled={!finalVideoBlob}>
+              <Download className="w-4 h-4 mr-2" /> Download Final Video
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
