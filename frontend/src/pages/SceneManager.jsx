@@ -627,14 +627,20 @@ export default function SceneManager({ user }) {
 
           <div className="flex items-center gap-3">
             {project?.status === "completed" ? (
-              <Button className="bg-green-600 hover:bg-green-700" data-testid="download-final-btn">
-                <Download className="w-4 h-4 mr-2" />
-                Download Final Video
-              </Button>
+              <div className="flex gap-2">
+                <Button variant="outline" onClick={() => setShowFinalVideoDialog(true)} data-testid="play-final-btn">
+                  <Play className="w-4 h-4 mr-2" />
+                  Play
+                </Button>
+                <Button className="bg-green-600 hover:bg-green-700" onClick={handleDownloadFinalVideo} disabled={!finalVideoBlob} data-testid="download-final-btn">
+                  <Download className="w-4 h-4 mr-2" />
+                  Download
+                </Button>
+              </div>
             ) : videosApproved > 0 ? (
-              <Button onClick={assembleFinalVideo} disabled={assembling} className="bg-primary hover:bg-primary/90" data-testid="assemble-video-btn">
-                {assembling ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Film className="w-4 h-4 mr-2" />}
-                Assemble Final Video ({videosApproved} clips)
+              <Button onClick={assembleFinalVideo} disabled={assembling || generatingFinalVideo} className="bg-primary hover:bg-primary/90" data-testid="assemble-video-btn">
+                {(assembling || generatingFinalVideo) ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Film className="w-4 h-4 mr-2" />}
+                {generatingFinalVideo ? "Creating Video..." : `Assemble Final Video (${videosApproved} clips)`}
               </Button>
             ) : null}
           </div>
