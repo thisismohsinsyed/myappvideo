@@ -810,17 +810,24 @@ export default function SceneManager({ user }) {
                           selectedForApproval.has(scene.scene_id) ? "ring-2 ring-primary" : ""
                         }`}>
                           <div className="grid md:grid-cols-2">
-                            <div className="relative aspect-video bg-black">
+                            <div 
+                              className="relative aspect-video bg-black cursor-pointer group"
+                              onClick={() => setVideoPreviewScene(scene)}
+                              data-testid={`video-preview-${scene.scene_id}`}
+                            >
                               {scene.image_data && (
-                                <img src={`data:image/png;base64,${scene.image_data}`} alt="" className="w-full h-full object-cover opacity-80" />
+                                <img src={`data:image/png;base64,${scene.image_data}`} alt="" className="w-full h-full object-cover opacity-80 group-hover:opacity-60 transition-opacity" />
                               )}
                               <div className="absolute inset-0 flex items-center justify-center">
-                                <div className="w-12 h-12 rounded-full bg-white/90 flex items-center justify-center">
-                                  <Play className="w-6 h-6 text-purple-600 ml-0.5" />
+                                <div className="w-14 h-14 rounded-full bg-white/90 flex items-center justify-center group-hover:scale-110 transition-transform shadow-lg">
+                                  <Play className="w-7 h-7 text-purple-600 ml-1" />
                                 </div>
                               </div>
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                <span className="text-white text-sm font-medium opacity-0 group-hover:opacity-100 transition-opacity">Click to Preview</span>
+                              </div>
                               {!scene.video_approved && (
-                                <div className="absolute top-2 left-2">
+                                <div className="absolute top-2 left-2" onClick={(e) => e.stopPropagation()}>
                                   <Checkbox checked={selectedForApproval.has(scene.scene_id)} onCheckedChange={() => toggleSceneSelection(scene.scene_id)} className="bg-white" />
                                 </div>
                               )}
@@ -835,7 +842,10 @@ export default function SceneManager({ user }) {
                             </div>
                             <CardContent className="p-4">
                               <h4 className="font-semibold mb-1">Scene {scene.scene_number}</h4>
-                              <p className="text-sm text-muted-foreground line-clamp-3">{scene.description}</p>
+                              <p className="text-sm text-muted-foreground line-clamp-3 mb-2">{scene.description}</p>
+                              <Button size="sm" variant="outline" onClick={() => setVideoPreviewScene(scene)}>
+                                <Play className="w-3 h-3 mr-1" /> Preview Video
+                              </Button>
                             </CardContent>
                           </div>
                         </Card>
