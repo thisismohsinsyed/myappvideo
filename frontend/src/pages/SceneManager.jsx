@@ -281,7 +281,12 @@ export default function SceneManager({ user }) {
     
     // If video URL doesn't exist yet, create it
     if (!sceneVideoUrls[scene.scene_id] && scene.image_data) {
-      await createSceneVideo(scene.scene_id, scene.image_data);
+      toast.info("Creating video preview... Please wait (10 seconds)");
+      const result = await createSceneVideo(scene.scene_id, scene.image_data);
+      if (result) {
+        // Force a re-render with the new URL
+        setSceneVideoUrls(prev => ({ ...prev, [scene.scene_id]: result }));
+      }
     }
   };
 
