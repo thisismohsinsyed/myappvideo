@@ -1045,6 +1045,111 @@ export default function SceneManager({ user }) {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Video Preview Dialog */}
+      <Dialog open={!!videoPreviewScene} onOpenChange={() => setVideoPreviewScene(null)}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Scene {videoPreviewScene?.scene_number} - Video Preview</DialogTitle>
+            <DialogDescription>{videoPreviewScene?.description}</DialogDescription>
+          </DialogHeader>
+          
+          {/* Video Player Area */}
+          <div className="relative bg-black rounded-lg overflow-hidden">
+            {videoPreviewScene?.image_data ? (
+              <div className="relative aspect-video">
+                {/* Simulated video with animated image */}
+                <img 
+                  src={`data:image/png;base64,${videoPreviewScene.image_data}`} 
+                  alt={`Scene ${videoPreviewScene?.scene_number}`} 
+                  className="w-full h-full object-cover"
+                />
+                
+                {/* Video overlay with play animation */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-black/30">
+                  {/* Animated scan line effect to simulate video */}
+                  <div className="absolute inset-0 overflow-hidden">
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent via-white/5 to-transparent animate-pulse" style={{ animationDuration: '2s' }} />
+                  </div>
+                  
+                  {/* Video controls overlay */}
+                  <div className="absolute bottom-0 left-0 right-0 p-4">
+                    <div className="flex items-center gap-3">
+                      <Button size="sm" variant="secondary" className="rounded-full w-10 h-10 p-0">
+                        <Play className="w-5 h-5 ml-0.5" />
+                      </Button>
+                      
+                      {/* Progress bar */}
+                      <div className="flex-1">
+                        <div className="h-1 bg-white/30 rounded-full overflow-hidden">
+                          <div className="h-full bg-white rounded-full w-0 animate-[progress_10s_linear_infinite]" 
+                               style={{ animation: 'progress 10s linear infinite' }} />
+                        </div>
+                      </div>
+                      
+                      <span className="text-white text-sm font-medium">0:10</span>
+                    </div>
+                  </div>
+                  
+                  {/* Scene info */}
+                  <div className="absolute top-4 left-4">
+                    <span className="px-3 py-1 bg-purple-600 text-white text-sm font-medium rounded-full">
+                      Scene {videoPreviewScene?.scene_number}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="aspect-video flex items-center justify-center">
+                <div className="text-center text-white/70">
+                  <Film className="w-12 h-12 mx-auto mb-2 opacity-50" />
+                  <p>No video preview available</p>
+                </div>
+              </div>
+            )}
+          </div>
+          
+          {/* Video Info */}
+          <div className="grid grid-cols-3 gap-4 text-sm">
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-muted-foreground text-xs mb-1">Duration</p>
+              <p className="font-medium">10 seconds</p>
+            </div>
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-muted-foreground text-xs mb-1">Resolution</p>
+              <p className="font-medium">1080p HD</p>
+            </div>
+            <div className="p-3 bg-muted rounded-lg">
+              <p className="text-muted-foreground text-xs mb-1">Status</p>
+              <p className="font-medium text-green-600">
+                {videoPreviewScene?.video_approved ? "Approved" : "Pending Review"}
+              </p>
+            </div>
+          </div>
+          
+          {/* Note about simulated video */}
+          <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg text-sm">
+            <p className="text-amber-800">
+              <strong>Note:</strong> This is a preview simulation. Full video playback requires Veo 3.1 API integration.
+            </p>
+          </div>
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { generateVideo(videoPreviewScene.scene_id); setVideoPreviewScene(null); }}>
+              <RefreshCw className="w-4 h-4 mr-2" /> Regenerate Video
+            </Button>
+            {!videoPreviewScene?.video_approved && (
+              <Button className="bg-green-600 hover:bg-green-700" onClick={() => { 
+                setSelectedForApproval(new Set([videoPreviewScene.scene_id])); 
+                handleApproveSelected("video", true); 
+                setVideoPreviewScene(null); 
+              }}>
+                <Check className="w-4 h-4 mr-2" /> Approve Video
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
