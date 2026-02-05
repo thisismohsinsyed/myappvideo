@@ -288,6 +288,19 @@ async def get_api_key_status(user: User = Depends(get_current_user)):
         "selected_model": user.selected_model
     }
 
+@api_router.delete("/settings/api-key")
+async def delete_api_key(user: User = Depends(get_current_user)):
+    """Delete/remove Gemini API key"""
+    await db.users.update_one(
+        {"user_id": user.user_id},
+        {"$set": {
+            "gemini_api_key": None,
+            "selected_model": None,
+            "updated_at": datetime.now(timezone.utc).isoformat()
+        }}
+    )
+    return {"message": "API key deleted successfully"}
+
 @api_router.post("/settings/model")
 async def set_model(request: ModelSelectRequest, user: User = Depends(get_current_user)):
     """Set selected Gemini model"""
