@@ -985,10 +985,16 @@ export default function SceneManager({ user }) {
                           <CheckCircle2 className="w-12 h-12 text-green-500 mx-auto mb-3" />
                           <h3 className="text-lg font-semibold text-green-900 mb-1">Your Video is Ready!</h3>
                           <p className="text-green-700 mb-4">{videosApproved} scenes • {videosApproved * 10}s total</p>
-                          <Button className="bg-green-600 hover:bg-green-700">
-                            <Download className="w-4 h-4 mr-2" />
-                            Download Final Video
-                          </Button>
+                          <div className="flex gap-3 justify-center">
+                            <Button variant="outline" onClick={() => setShowFinalVideoDialog(true)}>
+                              <Play className="w-4 h-4 mr-2" />
+                              Play Video
+                            </Button>
+                            <Button className="bg-green-600 hover:bg-green-700" onClick={handleDownloadFinalVideo} disabled={!finalVideoBlob}>
+                              <Download className="w-4 h-4 mr-2" />
+                              Download
+                            </Button>
+                          </div>
                         </CardContent>
                       </Card>
                     )}
