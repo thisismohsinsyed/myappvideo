@@ -532,13 +532,14 @@ export default function SceneManager({ user }) {
         setProject((prev) => ({ ...prev, status: "completed" }));
         
         // Now create the actual combined video
-        toast.info("Creating final video file...");
+        toast.info("Creating final video file... This takes about " + (approvedVideos.length * 10) + " seconds");
         
         // Ensure all scene videos are created
         const videosToCreate = [];
         for (const scene of approvedVideos) {
           if (!sceneVideoUrls[scene.scene_id] && scene.image_data) {
-            const videoBlob = await createVideoFromImage(scene.image_data, 10);
+            console.log('Creating video for scene:', scene.scene_number);
+            const videoBlob = await createVideoFromImageSimple(scene.image_data, 10);
             const videoUrl = URL.createObjectURL(videoBlob);
             setSceneVideoUrls(prev => ({ ...prev, [scene.scene_id]: { url: videoUrl, blob: videoBlob } }));
             videosToCreate.push({ blob: videoBlob, duration: 10 });
