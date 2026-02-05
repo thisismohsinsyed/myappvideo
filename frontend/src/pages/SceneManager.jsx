@@ -46,7 +46,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { API } from "@/App";
-import { createVideoFromImage, combineVideos, downloadBlob } from "@/utils/videoUtils";
+import { createVideoFromImageSimple, combineVideos, downloadBlob } from "@/utils/videoUtils";
 
 // Step definitions
 const STEPS = [
