@@ -368,6 +368,10 @@ FADE OUT."""
             test()
             time.sleep(1)  # Delay between tests for API rate limiting
 
+    def test_logout_without_session(self):
+        """Test logout without session"""
+        return self.run_test("Logout without session", "POST", "auth/logout", 200)
+
     def run_unauthenticated_tests(self):
         """Run all tests that should work without authentication"""
         self.log("=== Running Unauthenticated API Tests ===")
