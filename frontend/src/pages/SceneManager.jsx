@@ -338,14 +338,14 @@ export default function SceneManager({ user }) {
     }
 
     setGeneratingAllVideos(true);
-    setGenerationProgress({ current: 0, total: approvedScenes.length, status: "Starting video generation..." });
+    setGenerationProgress({ current: 0, total: approvedScenes.length, status: "Starting video generation with Veo..." });
 
     for (let i = 0; i < approvedScenes.length; i++) {
       const scene = approvedScenes[i];
       setGenerationProgress({ 
         current: i, 
         total: approvedScenes.length, 
-        status: `Generating video ${i + 1} of ${approvedScenes.length} (Scene ${scene.scene_number})...` 
+        status: `Generating video ${i + 1} of ${approvedScenes.length} (Scene ${scene.scene_number})... This may take a few minutes.` 
       });
 
       try {
@@ -355,9 +355,19 @@ export default function SceneManager({ user }) {
         );
 
         if (response.ok) {
-          // Create actual video file from image
-          if (scene.image_data) {
-            await createSceneVideo(scene.scene_id, scene.image_data);
+          const data = await response.json();
+          
+          // If API returned video data, store it
+          if (data.video_data) {
+            const byteCharacters = atob(data.video_data);
+            const byteNumbers = new Array(byteCharacters.length);
+            for (let i = 0; i < byteCharacters.length; i++) {
+              byteNumbers[i] = byteCharacters.charCodeAt(i);
+            }
+            const byteArray = new Uint8Array(byteNumbers);
+            const blob = new Blob([byteArray], { type: 'video/mp4' });
+            const videoUrl = URL.createObjectURL(blob);
+            setSceneVideoUrls(prev => ({ ...prev, [scene.scene_id]: { url: videoUrl, blob: blob } }));
           }
           
           setScenes((prev) =>
@@ -367,6 +377,9 @@ export default function SceneManager({ user }) {
                 : s
             )
           );
+        } else {
+          const error = await response.json();
+          toast.error(`Scene ${scene.scene_number}: ${error.detail || "Failed"}`);
         }
       } catch (error) {
         toast.error(`Scene ${scene.scene_number}: Video generation failed`);
