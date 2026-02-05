@@ -584,26 +584,27 @@ export default function SceneManager({ user }) {
         const data = await response.json();
         setProject((prev) => ({ ...prev, status: "completed" }));
         
-        // Now create the actual combined video
-        toast.info("Creating final video file... This takes about " + (approvedVideos.length * 10) + " seconds");
+        // Fetch all approved scene videos from API
+        toast.info("Preparing final video...");
         
-        // Ensure all scene videos are created
-        const videosToCreate = [];
+        const videosToMerge = [];
         for (const scene of approvedVideos) {
-          if (!sceneVideoUrls[scene.scene_id] && scene.image_data) {
-            console.log('Creating video for scene:', scene.scene_number);
-            const videoBlob = await createVideoFromImageSimple(scene.image_data, 10);
-            const videoUrl = URL.createObjectURL(videoBlob);
-            setSceneVideoUrls(prev => ({ ...prev, [scene.scene_id]: { url: videoUrl, blob: videoBlob } }));
-            videosToCreate.push({ blob: videoBlob, duration: 10 });
-          } else if (sceneVideoUrls[scene.scene_id]) {
-            videosToCreate.push({ blob: sceneVideoUrls[scene.scene_id].blob, duration: 10 });
+          // First check if we have it cached
+          if (sceneVideoUrls[scene.scene_id]?.blob) {
+            videosToMerge.push({ blob: sceneVideoUrls[scene.scene_id].blob, duration: 10 });
+          } else {
+            // Fetch from API
+            const videoResult = await fetchSceneVideo(scene.scene_id);
+            if (videoResult?.blob) {
+              videosToMerge.push({ blob: videoResult.blob, duration: 10 });
+            }
           }
         }
         
-        // Combine all videos
-        if (videosToCreate.length > 0) {
-          const combinedBlob = await combineVideos(videosToCreate);
+        // Merge all videos into one
+        if (videosToMerge.length > 0) {
+          toast.info("Merging video clips...");
+          const combinedBlob = await mergeVideoBlobs(videosToMerge.map(v => v.blob));
           const combinedUrl = URL.createObjectURL(combinedBlob);
           setFinalVideoUrl(combinedUrl);
           setFinalVideoBlob(combinedBlob);
@@ -616,11 +617,79 @@ export default function SceneManager({ user }) {
         toast.error(error.detail || "Failed to assemble video");
       }
     } catch (error) {
+      console.error("Assembly error:", error);
       toast.error("Failed to assemble video");
     } finally {
       setAssembling(false);
       setGeneratingFinalVideo(false);
     }
+  };
+
+  // Merge multiple video blobs into one using MediaRecorder
+  const mergeVideoBlobs = async (blobs) => {
+    if (blobs.length === 0) return null;
+    if (blobs.length === 1) return blobs[0];
+    
+    // Create a canvas to draw video frames
+    const canvas = document.createElement('canvas');
+    canvas.width = 1280;
+    canvas.height = 720;
+    const ctx = canvas.getContext('2d');
+    
+    const stream = canvas.captureStream(30);
+    const mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+    const chunks = [];
+    
+    mediaRecorder.ondataavailable = (e) => {
+      if (e.data.size > 0) chunks.push(e.data);
+    };
+    
+    return new Promise(async (resolve) => {
+      mediaRecorder.onstop = () => {
+        const finalBlob = new Blob(chunks, { type: 'video/webm' });
+        resolve(finalBlob);
+      };
+      
+      mediaRecorder.start(100);
+      
+      // Play each video and capture frames
+      for (const blob of blobs) {
+        await playVideoToCanvas(blob, canvas, ctx);
+      }
+      
+      mediaRecorder.stop();
+    });
+  };
+
+  // Play a video blob and draw to canvas
+  const playVideoToCanvas = (blob, canvas, ctx) => {
+    return new Promise((resolve) => {
+      const video = document.createElement('video');
+      video.src = URL.createObjectURL(blob);
+      video.muted = true;
+      
+      video.onended = () => {
+        URL.revokeObjectURL(video.src);
+        resolve();
+      };
+      
+      video.onerror = () => {
+        URL.revokeObjectURL(video.src);
+        resolve();
+      };
+      
+      video.onplay = () => {
+        const drawFrame = () => {
+          if (!video.paused && !video.ended) {
+            ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+            requestAnimationFrame(drawFrame);
+          }
+        };
+        drawFrame();
+      };
+      
+      video.play().catch(() => resolve());
+    });
   };
 
   // Download final video
