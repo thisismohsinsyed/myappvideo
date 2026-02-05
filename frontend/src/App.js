@@ -1,5 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { BrowserRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
+import { BrowserRouter, Routes, Route, useNavigate } from "react-router-dom";
 import "@/App.css";
 
 // Pages
@@ -15,6 +15,10 @@ import { Toaster } from "@/components/ui/sonner";
 const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
 export const API = `${BACKEND_URL}/api`;
 
+// Auth Context - Simple global state for user
+let globalUser = null;
+let globalSetUser = null;
+
 // Auth Callback Component
 const AuthCallback = () => {
   const navigate = useNavigate();
@@ -25,21 +29,15 @@ const AuthCallback = () => {
     hasProcessed.current = true;
 
     const processAuth = async () => {
-      // Get hash from window.location directly to ensure we get the latest value
       const hash = window.location.hash;
-      console.log("Auth callback - hash:", hash);
-      
       const sessionId = hash.split("session_id=")[1]?.split("&")[0];
-      console.log("Auth callback - sessionId:", sessionId);
 
       if (!sessionId) {
-        console.log("No session ID found, redirecting to home");
-        navigate("/");
+        navigate("/", { replace: true });
         return;
       }
 
       try {
-        console.log("Calling auth/session endpoint...");
         const response = await fetch(`${API}/auth/session`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -47,22 +45,19 @@ const AuthCallback = () => {
           body: JSON.stringify({ session_id: sessionId }),
         });
 
-        console.log("Auth response status:", response.status);
-        
         if (response.ok) {
           const user = await response.json();
-          console.log("Auth success, user:", user.email);
-          // Clear the hash and navigate to dashboard
+          globalUser = user;
+          if (globalSetUser) globalSetUser(user);
+          // Clear hash and go to dashboard
           window.history.replaceState(null, "", "/dashboard");
-          navigate("/dashboard", { state: { user }, replace: true });
+          navigate("/dashboard", { replace: true });
         } else {
-          const errorData = await response.json();
-          console.error("Auth failed:", errorData);
-          navigate("/");
+          navigate("/", { replace: true });
         }
       } catch (error) {
         console.error("Auth error:", error);
-        navigate("/");
+        navigate("/", { replace: true });
       }
     };
 
@@ -73,7 +68,7 @@ const AuthCallback = () => {
     <div className="min-h-screen flex items-center justify-center bg-background">
       <div className="text-center">
         <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-        <p className="text-muted-foreground">Authenticating...</p>
+        <p className="text-muted-foreground">Signing you in...</p>
       </div>
     </div>
   );
@@ -81,21 +76,29 @@ const AuthCallback = () => {
 
 // Protected Route Component
 const ProtectedRoute = ({ children }) => {
-  const [isAuthenticated, setIsAuthenticated] = useState(null);
-  const [user, setUser] = useState(null);
+  const [isAuthenticated, setIsAuthenticated] = useState(globalUser ? true : null);
+  const [user, setUser] = useState(globalUser);
   const navigate = useNavigate();
-  const location = useLocation();
+
+  // Store setter globally for AuthCallback to use
+  useEffect(() => {
+    globalSetUser = (u) => {
+      setUser(u);
+      setIsAuthenticated(true);
+    };
+    return () => { globalSetUser = null; };
+  }, []);
 
   useEffect(() => {
-    // If there's a session_id in hash, let AuthCallback handle it
-    if (window.location.hash.includes("session_id=")) {
+    // Skip if already authenticated via global state
+    if (globalUser) {
+      setUser(globalUser);
+      setIsAuthenticated(true);
       return;
     }
 
-    // If user data passed from AuthCallback, use it
-    if (location.state?.user) {
-      setUser(location.state.user);
-      setIsAuthenticated(true);
+    // Skip auth check if hash has session_id (AuthCallback will handle)
+    if (window.location.hash.includes("session_id=")) {
       return;
     }
 
@@ -107,21 +110,21 @@ const ProtectedRoute = ({ children }) => {
 
         if (response.ok) {
           const userData = await response.json();
+          globalUser = userData;
           setUser(userData);
           setIsAuthenticated(true);
         } else {
           setIsAuthenticated(false);
-          navigate("/");
+          navigate("/", { replace: true });
         }
       } catch (error) {
         setIsAuthenticated(false);
-        navigate("/");
+        navigate("/", { replace: true });
       }
     };
 
     checkAuth();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [navigate, location.state]);
+  }, [navigate]);
 
   if (isAuthenticated === null) {
     return (
@@ -135,57 +138,23 @@ const ProtectedRoute = ({ children }) => {
     return null;
   }
 
-  // Clone children and pass user prop
   return children({ user, setUser });
 };
 
-// Router Component
+// Main Router
 const AppRouter = () => {
-  const location = useLocation();
-
-  // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
-  // Check URL fragment for session_id - use window.location.hash directly
-  // This runs on every render to catch the hash immediately after redirect
-  const currentHash = window.location.hash;
-  if (currentHash && currentHash.includes("session_id=")) {
+  // Check for session_id in hash immediately
+  if (window.location.hash.includes("session_id=")) {
     return <AuthCallback />;
   }
 
   return (
     <Routes>
       <Route path="/" element={<LandingPage />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            {({ user }) => <Dashboard user={user} />}
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/setup"
-        element={
-          <ProtectedRoute>
-            {({ user }) => <ApiKeySetup user={user} />}
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/project/:projectId"
-        element={
-          <ProtectedRoute>
-            {({ user }) => <ProjectEditor user={user} />}
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/project/:projectId/scenes"
-        element={
-          <ProtectedRoute>
-            {({ user }) => <SceneManager user={user} />}
-          </ProtectedRoute>
-        }
-      />
+      <Route path="/dashboard" element={<ProtectedRoute>{({ user }) => <Dashboard user={user} />}</ProtectedRoute>} />
+      <Route path="/setup" element={<ProtectedRoute>{({ user }) => <ApiKeySetup user={user} />}</ProtectedRoute>} />
+      <Route path="/project/:projectId" element={<ProtectedRoute>{({ user }) => <ProjectEditor user={user} />}</ProtectedRoute>} />
+      <Route path="/project/:projectId/scenes" element={<ProtectedRoute>{({ user }) => <SceneManager user={user} />}</ProtectedRoute>} />
     </Routes>
   );
 };
