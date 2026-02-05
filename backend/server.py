@@ -611,6 +611,110 @@ async def get_characters(project_id: str, user: User = Depends(get_current_user)
     
     return {"characters": characters}
 
+class CharacterCreate(BaseModel):
+    name: str
+    appearance: Optional[str] = ""
+    clothing: Optional[str] = ""
+    age: Optional[str] = ""
+    style: Optional[str] = ""
+
+class CharacterUpdate(BaseModel):
+    name: Optional[str] = None
+    appearance: Optional[str] = None
+    clothing: Optional[str] = None
+    age: Optional[str] = None
+    style: Optional[str] = None
+
+@api_router.post("/projects/{project_id}/characters")
+async def create_character(project_id: str, char: CharacterCreate, user: User = Depends(get_current_user)):
+    """Create a new character for a project"""
+    project = await db.projects.find_one(
+        {"project_id": project_id, "user_id": user.user_id},
+        {"_id": 0}
+    )
+    
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    character_id = f"char_{uuid.uuid4().hex[:12]}"
+    now = datetime.now(timezone.utc).isoformat()
+    
+    char_doc = {
+        "character_id": character_id,
+        "project_id": project_id,
+        "name": char.name,
+        "appearance": char.appearance or "",
+        "clothing": char.clothing or "",
+        "age": char.age or "",
+        "style": char.style or "",
+        "reference_prompt": f"{char.appearance or ''} {char.clothing or ''} {char.style or ''}",
+        "created_at": now
+    }
+    
+    await db.characters.insert_one(char_doc)
+    
+    result = await db.characters.find_one({"character_id": character_id}, {"_id": 0})
+    return result
+
+@api_router.put("/projects/{project_id}/characters/{character_id}")
+async def update_character(project_id: str, character_id: str, update: CharacterUpdate, user: User = Depends(get_current_user)):
+    """Update a character"""
+    project = await db.projects.find_one(
+        {"project_id": project_id, "user_id": user.user_id},
+        {"_id": 0}
+    )
+    
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    character = await db.characters.find_one(
+        {"character_id": character_id, "project_id": project_id},
+        {"_id": 0}
+    )
+    
+    if not character:
+        raise HTTPException(status_code=404, detail="Character not found")
+    
+    update_data = {k: v for k, v in update.model_dump().items() if v is not None}
+    
+    # Update reference prompt
+    if update_data:
+        appearance = update_data.get("appearance", character.get("appearance", ""))
+        clothing = update_data.get("clothing", character.get("clothing", ""))
+        style = update_data.get("style", character.get("style", ""))
+        update_data["reference_prompt"] = f"{appearance} {clothing} {style}"
+        
+        await db.characters.update_one(
+            {"character_id": character_id},
+            {"$set": update_data}
+        )
+    
+    result = await db.characters.find_one({"character_id": character_id}, {"_id": 0})
+    return result
+
+@api_router.delete("/projects/{project_id}/characters/{character_id}")
+async def delete_character(project_id: str, character_id: str, user: User = Depends(get_current_user)):
+    """Delete a character"""
+    project = await db.projects.find_one(
+        {"project_id": project_id, "user_id": user.user_id},
+        {"_id": 0}
+    )
+    
+    if not project:
+        raise HTTPException(status_code=404, detail="Project not found")
+    
+    character = await db.characters.find_one(
+        {"character_id": character_id, "project_id": project_id},
+        {"_id": 0}
+    )
+    
+    if not character:
+        raise HTTPException(status_code=404, detail="Character not found")
+    
+    await db.characters.delete_one({"character_id": character_id})
+    
+    return {"message": "Character deleted successfully"}
+
 # ==================== IMAGE GENERATION ====================
 
 @api_router.post("/projects/{project_id}/scenes/{scene_id}/generate-image")
