@@ -255,20 +255,35 @@ export default function SceneManager({ user }) {
     }
   };
 
-  // Create actual video file from image
-  const createSceneVideo = async (sceneId, imageData) => {
+  // Fetch video from API
+  const fetchSceneVideo = async (sceneId) => {
     setGeneratingSceneVideo(prev => ({ ...prev, [sceneId]: true }));
     try {
-      console.log('Creating video for scene:', sceneId);
-      const videoBlob = await createVideoFromImageSimple(imageData, 10);
-      console.log('Video blob created:', videoBlob.size, 'bytes');
-      const videoUrl = URL.createObjectURL(videoBlob);
-      console.log('Video URL:', videoUrl);
-      setSceneVideoUrls(prev => ({ ...prev, [sceneId]: { url: videoUrl, blob: videoBlob } }));
-      return { url: videoUrl, blob: videoBlob };
+      const response = await fetch(
+        `${API}/projects/${projectId}/scenes/${sceneId}/video`,
+        { credentials: "include" }
+      );
+      
+      if (response.ok) {
+        const data = await response.json();
+        if (data.video_data) {
+          // Convert base64 to blob URL
+          const byteCharacters = atob(data.video_data);
+          const byteNumbers = new Array(byteCharacters.length);
+          for (let i = 0; i < byteCharacters.length; i++) {
+            byteNumbers[i] = byteCharacters.charCodeAt(i);
+          }
+          const byteArray = new Uint8Array(byteNumbers);
+          const blob = new Blob([byteArray], { type: 'video/mp4' });
+          const videoUrl = URL.createObjectURL(blob);
+          
+          setSceneVideoUrls(prev => ({ ...prev, [sceneId]: { url: videoUrl, blob: blob } }));
+          return { url: videoUrl, blob: blob };
+        }
+      }
+      return null;
     } catch (error) {
-      console.error("Error creating scene video:", error);
-      toast.error("Failed to create video preview");
+      console.error("Error fetching video:", error);
       return null;
     } finally {
       setGeneratingSceneVideo(prev => ({ ...prev, [sceneId]: false }));
@@ -279,14 +294,39 @@ export default function SceneManager({ user }) {
   const prepareVideoPreview = async (scene) => {
     setVideoPreviewScene(scene);
     
-    // If video URL doesn't exist yet, create it
+    // First try to fetch from API if video was generated
+    if (scene.video_status === "completed" && !sceneVideoUrls[scene.scene_id]) {
+      toast.info("Loading video...");
+      const result = await fetchSceneVideo(scene.scene_id);
+      if (result) {
+        return;
+      }
+    }
+    
+    // Fallback: Create video from image using browser APIs
     if (!sceneVideoUrls[scene.scene_id] && scene.image_data) {
       toast.info("Creating video preview... Please wait (10 seconds)");
-      const result = await createSceneVideo(scene.scene_id, scene.image_data);
+      const result = await createSceneVideoFromImage(scene.scene_id, scene.image_data);
       if (result) {
-        // Force a re-render with the new URL
         setSceneVideoUrls(prev => ({ ...prev, [scene.scene_id]: result }));
       }
+    }
+  };
+
+  // Create video from image using browser Canvas API (fallback)
+  const createSceneVideoFromImage = async (sceneId, imageData) => {
+    setGeneratingSceneVideo(prev => ({ ...prev, [sceneId]: true }));
+    try {
+      const videoBlob = await createVideoFromImageSimple(imageData, 10);
+      const videoUrl = URL.createObjectURL(videoBlob);
+      setSceneVideoUrls(prev => ({ ...prev, [sceneId]: { url: videoUrl, blob: videoBlob } }));
+      return { url: videoUrl, blob: videoBlob };
+    } catch (error) {
+      console.error("Error creating scene video:", error);
+      toast.error("Failed to create video preview");
+      return null;
+    } finally {
+      setGeneratingSceneVideo(prev => ({ ...prev, [sceneId]: false }));
     }
   };
 
