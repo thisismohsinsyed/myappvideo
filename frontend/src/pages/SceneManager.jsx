@@ -79,6 +79,7 @@ export default function SceneManager({ user }) {
   const [editCharacterDialog, setEditCharacterDialog] = useState(null);
   const [editSceneDialog, setEditSceneDialog] = useState(null);
   const [newCharacterDialog, setNewCharacterDialog] = useState(false);
+  const [videoPreviewScene, setVideoPreviewScene] = useState(null);
   
   // Form states
   const [editingCharacter, setEditingCharacter] = useState({});
