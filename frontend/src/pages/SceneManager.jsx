@@ -304,6 +304,11 @@ export default function SceneManager({ user }) {
         );
 
         if (response.ok) {
+          // Create actual video file from image
+          if (scene.image_data) {
+            await createSceneVideo(scene.scene_id, scene.image_data);
+          }
+          
           setScenes((prev) =>
             prev.map((s) =>
               s.scene_id === scene.scene_id
