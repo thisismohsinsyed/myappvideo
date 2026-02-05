@@ -196,12 +196,24 @@ export default function ApiKeySetup({ user }) {
           </CardHeader>
           <CardContent className="space-y-6">
             {hasKey ? (
-              <div className="flex items-center gap-3 p-4 rounded-lg bg-green-50 border border-green-200">
-                <Check className="w-5 h-5 text-green-600" />
-                <div>
-                  <p className="font-medium text-green-900">API Key Configured</p>
-                  <p className="text-sm text-green-700">Your Gemini API key is set and validated</p>
+              <div className="flex items-center justify-between p-4 rounded-lg bg-green-50 border border-green-200">
+                <div className="flex items-center gap-3">
+                  <Check className="w-5 h-5 text-green-600" />
+                  <div>
+                    <p className="font-medium text-green-900">API Key Configured</p>
+                    <p className="text-sm text-green-700">Your Gemini API key is set and validated</p>
+                  </div>
                 </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleDeleteApiKey}
+                  className="text-red-600 border-red-200 hover:bg-red-50"
+                  data-testid="delete-api-key-btn"
+                >
+                  <Trash2 className="w-4 h-4 mr-1" />
+                  Delete Key
+                </Button>
               </div>
             ) : (
               <div className="flex items-center gap-3 p-4 rounded-lg bg-amber-50 border border-amber-200">
