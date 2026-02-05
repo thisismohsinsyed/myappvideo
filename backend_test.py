@@ -164,9 +164,209 @@ class ScriptifyAPITester:
         """Test final video assembly without auth"""
         return self.run_test("Final assembly without auth", "POST", "projects/test/assemble", 401)
 
-    def test_logout_without_session(self):
-        """Test logout without session"""
-        return self.run_test("Logout without session", "POST", "auth/logout", 200)
+    def cleanup_test_data(self):
+        """Clean up test data from MongoDB"""
+        if not self.user_id:
+            return
+            
+        try:
+            mongo_script = f"""
+            use('test_database');
+            db.projects.deleteMany({{user_id: '{self.user_id}'}});
+            db.scenes.deleteMany({{project_id: /{self.user_id}/}});
+            db.characters.deleteMany({{project_id: /{self.user_id}/}});
+            db.user_sessions.deleteMany({{user_id: '{self.user_id}'}});
+            db.users.deleteMany({{user_id: '{self.user_id}'}});
+            """
+            
+            subprocess.run(['mongosh', '--eval', mongo_script], 
+                          capture_output=True, text=True, timeout=30)
+            self.log("✅ Test data cleaned up")
+            
+        except Exception as e:
+            self.log(f"❌ Error cleaning up test data: {e}", "ERROR")
+
+    def test_authenticated_user(self):
+        """Test getting authenticated user info"""
+        return self.run_test("Get authenticated user", "GET", "auth/me", 200)
+
+    def test_api_key_status(self):
+        """Test API key status"""
+        return self.run_test("API key status", "GET", "settings/api-key/status", 200)
+
+    def test_get_models(self):
+        """Test getting available models"""
+        return self.run_test("Get available models", "GET", "settings/models", 200)
+
+    def test_create_project(self):
+        """Test creating a new project"""
+        project_data = {
+            "title": f"Test Video Project {int(time.time())}",
+            "script": """FADE IN:
+
+EXT. MOUNTAIN PEAK - SUNRISE
+
+A lone HIKER (30s, determined) stands at the edge of a cliff, watching the sun rise over snow-capped mountains. The golden light illuminates their face.
+
+HIKER
+(to themselves)
+This is it. The moment I've been training for.
+
+The hiker adjusts their backpack and begins the descent down a treacherous rocky path.
+
+EXT. ROCKY PATH - CONTINUOUS
+
+The hiker carefully navigates loose rocks and narrow ledges. Each step is calculated, deliberate.
+
+HIKER (CONT'D)
+One step at a time. Just like life.
+
+A small avalanche of pebbles tumbles past. The hiker pauses, steadies themselves.
+
+EXT. VALLEY FLOOR - LATER
+
+The hiker emerges into a beautiful green valley with a crystal-clear stream. They kneel by the water, cupping it in their hands.
+
+HIKER (CONT'D)
+(smiling)
+Worth every step.
+
+FADE OUT."""
+        }
+        
+        success, response = self.run_test("Create project", "POST", "projects", 201, project_data)
+        if success and response:
+            self.project_id = response.get('project_id')
+            self.log(f"✅ Project created: {self.project_id}")
+        return success
+
+    def test_get_projects(self):
+        """Test getting user projects"""
+        return self.run_test("Get projects", "GET", "projects", 200)
+
+    def test_get_project(self):
+        """Test getting specific project"""
+        if not self.project_id:
+            self.log("❌ No project ID available for testing", "ERROR")
+            return False
+        return self.run_test("Get project", "GET", f"projects/{self.project_id}", 200)
+
+    def test_decompose_script(self):
+        """Test script decomposition into scenes"""
+        if not self.project_id:
+            self.log("❌ No project ID available for testing", "ERROR")
+            return False
+            
+        success, response = self.run_test("Decompose script", "POST", f"projects/{self.project_id}/decompose", 200)
+        if success and response:
+            scenes = response.get('scenes', [])
+            self.scene_ids = [scene['scene_id'] for scene in scenes]
+            self.log(f"✅ Script decomposed into {len(scenes)} scenes")
+        return success
+
+    def test_get_scenes(self):
+        """Test getting project scenes"""
+        if not self.project_id:
+            self.log("❌ No project ID available for testing", "ERROR")
+            return False
+        return self.run_test("Get scenes", "GET", f"projects/{self.project_id}/scenes", 200)
+
+    def test_get_characters(self):
+        """Test getting project characters"""
+        if not self.project_id:
+            self.log("❌ No project ID available for testing", "ERROR")
+            return False
+        return self.run_test("Get characters", "GET", f"projects/{self.project_id}/characters", 200)
+
+    def test_generate_single_image(self):
+        """Test generating image for a single scene"""
+        if not self.project_id or not self.scene_ids:
+            self.log("❌ No project/scene ID available for testing", "ERROR")
+            return False
+            
+        scene_id = self.scene_ids[0]
+        return self.run_test("Generate single image", "POST", f"projects/{self.project_id}/scenes/{scene_id}/generate-image", 200)
+
+    def test_generate_all_images(self):
+        """Test generating images for all scenes"""
+        if not self.project_id:
+            self.log("❌ No project ID available for testing", "ERROR")
+            return False
+        return self.run_test("Generate all images", "POST", f"projects/{self.project_id}/generate-all-images", 200)
+
+    def test_approve_images(self):
+        """Test bulk image approval"""
+        if not self.project_id or not self.scene_ids:
+            self.log("❌ No project/scene ID available for testing", "ERROR")
+            return False
+            
+        approval_data = {
+            "scene_ids": self.scene_ids[:2],  # Approve first 2 scenes
+            "approval_type": "image",
+            "approved": True
+        }
+        return self.run_test("Approve images", "POST", f"projects/{self.project_id}/scenes/approve", 200, approval_data)
+
+    def test_generate_videos_for_approved(self):
+        """Test generating videos only for approved images"""
+        if not self.project_id:
+            self.log("❌ No project ID available for testing", "ERROR")
+            return False
+        return self.run_test("Generate videos for approved", "POST", f"projects/{self.project_id}/generate-all-videos", 200)
+
+    def test_approve_videos(self):
+        """Test bulk video approval"""
+        if not self.project_id or not self.scene_ids:
+            self.log("❌ No project/scene ID available for testing", "ERROR")
+            return False
+            
+        approval_data = {
+            "scene_ids": self.scene_ids[:2],  # Approve first 2 videos
+            "approval_type": "video", 
+            "approved": True
+        }
+        return self.run_test("Approve videos", "POST", f"projects/{self.project_id}/scenes/approve", 200, approval_data)
+
+    def test_assemble_final_video(self):
+        """Test assembling final video from approved clips"""
+        if not self.project_id:
+            self.log("❌ No project ID available for testing", "ERROR")
+            return False
+        return self.run_test("Assemble final video", "POST", f"projects/{self.project_id}/assemble", 200)
+
+    def test_project_status(self):
+        """Test getting detailed project status"""
+        if not self.project_id:
+            self.log("❌ No project ID available for testing", "ERROR")
+            return False
+        return self.run_test("Get project status", "GET", f"projects/{self.project_id}/status", 200)
+
+    def run_authenticated_tests(self):
+        """Run all authenticated workflow tests"""
+        self.log("=== Running Authenticated Workflow Tests ===")
+        
+        tests = [
+            self.test_authenticated_user,
+            self.test_api_key_status,
+            self.test_get_models,
+            self.test_create_project,
+            self.test_get_projects,
+            self.test_get_project,
+            self.test_decompose_script,
+            self.test_get_scenes,
+            self.test_get_characters,
+            self.test_generate_single_image,
+            self.test_generate_all_images,
+            self.test_approve_images,
+            self.test_generate_videos_for_approved,
+            self.test_approve_videos,
+            self.test_assemble_final_video,
+            self.test_project_status
+        ]
+        
+        for test in tests:
+            test()
+            time.sleep(1)  # Delay between tests for API rate limiting
 
     def run_unauthenticated_tests(self):
         """Run all tests that should work without authentication"""
