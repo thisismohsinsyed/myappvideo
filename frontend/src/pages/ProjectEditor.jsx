@@ -39,9 +39,7 @@ export default function ProjectEditor({ user }) {
 
   const fetchProject = async () => {
     try {
-      const response = await fetch(`${API}/projects/${projectId}`, {
-        credentials: "include",
-      });
+      const response = await authFetch(`${API}/projects/${projectId}`);
       if (response.ok) {
         const data = await response.json();
         setProject(data);
@@ -61,9 +59,7 @@ export default function ProjectEditor({ user }) {
 
   const checkApiKey = async () => {
     try {
-      const response = await fetch(`${API}/settings/api-key/status`, {
-        credentials: "include",
-      });
+      const response = await authFetch(`${API}/settings/api-key/status`);
       if (response.ok) {
         const data = await response.json();
         setHasApiKey(data.has_key);
@@ -76,10 +72,9 @@ export default function ProjectEditor({ user }) {
   const handleSave = async () => {
     setSaving(true);
     try {
-      const response = await fetch(`${API}/projects/${projectId}`, {
+      const response = await authFetch(`${API}/projects/${projectId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ title, script }),
       });
 
@@ -105,10 +100,9 @@ export default function ProjectEditor({ user }) {
     
     const timeout = setTimeout(async () => {
       try {
-        await fetch(`${API}/projects/${projectId}`, {
+        await authFetch(`${API}/projects/${projectId}`, {
           method: "PUT",
           headers: { "Content-Type": "application/json" },
-          credentials: "include",
           body: JSON.stringify({ script: newScript }),
         });
       } catch (error) {
@@ -140,17 +134,15 @@ export default function ProjectEditor({ user }) {
     setDecomposing(true);
     try {
       // First save the script
-      await fetch(`${API}/projects/${projectId}`, {
+      await authFetch(`${API}/projects/${projectId}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ script }),
       });
 
       // Then decompose
-      const response = await fetch(`${API}/projects/${projectId}/decompose`, {
+      const response = await authFetch(`${API}/projects/${projectId}/decompose`, {
         method: "POST",
-        credentials: "include",
       });
 
       if (response.ok) {
