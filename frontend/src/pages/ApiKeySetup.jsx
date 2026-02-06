@@ -41,9 +41,7 @@ export default function ApiKeySetup({ user }) {
 
   const checkStatus = async () => {
     try {
-      const response = await fetch(`${API}/settings/api-key/status`, {
-        credentials: "include",
-      });
+      const response = await authFetch(`${API}/settings/api-key/status`);
       if (response.ok) {
         const data = await response.json();
         setHasKey(data.has_key);
@@ -60,9 +58,7 @@ export default function ApiKeySetup({ user }) {
   const fetchModels = async () => {
     setLoadingModels(true);
     try {
-      const response = await fetch(`${API}/settings/models`, {
-        credentials: "include",
-      });
+      const response = await authFetch(`${API}/settings/models`);
       if (response.ok) {
         const data = await response.json();
         setModels(data.models || []);
@@ -84,10 +80,9 @@ export default function ApiKeySetup({ user }) {
     setValidating(true);
 
     try {
-      const response = await fetch(`${API}/settings/api-key`, {
+      const response = await authFetch(`${API}/settings/api-key`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ api_key: apiKey.trim() }),
       });
 
@@ -115,9 +110,8 @@ export default function ApiKeySetup({ user }) {
     }
 
     try {
-      const response = await fetch(`${API}/settings/api-key`, {
+      const response = await authFetch(`${API}/settings/api-key`, {
         method: "DELETE",
-        credentials: "include",
       });
 
       if (response.ok) {
@@ -137,10 +131,9 @@ export default function ApiKeySetup({ user }) {
   const handleSelectModel = async (model) => {
     setSelectedModel(model);
     try {
-      const response = await fetch(`${API}/settings/model`, {
+      const response = await authFetch(`${API}/settings/model`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ model }),
       });
 
