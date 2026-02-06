@@ -50,9 +50,7 @@ export default function Dashboard({ user }) {
 
   const fetchProjects = async () => {
     try {
-      const response = await fetch(`${API}/projects`, {
-        credentials: "include",
-      });
+      const response = await authFetch(`${API}/projects`, {});
       if (response.ok) {
         const data = await response.json();
         setProjects(data.projects || []);
@@ -67,9 +65,7 @@ export default function Dashboard({ user }) {
 
   const checkApiKey = async () => {
     try {
-      const response = await fetch(`${API}/settings/api-key/status`, {
-        credentials: "include",
-      });
+      const response = await authFetch(`${API}/settings/api-key/status`);
       if (response.ok) {
         const data = await response.json();
         setApiKeyStatus(data);
@@ -87,10 +83,9 @@ export default function Dashboard({ user }) {
 
     setCreating(true);
     try {
-      const response = await fetch(`${API}/projects`, {
+      const response = await authFetch(`${API}/projects`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ title: newProjectTitle.trim() }),
       });
 
@@ -116,9 +111,8 @@ export default function Dashboard({ user }) {
     if (!window.confirm("Are you sure you want to delete this project?")) return;
 
     try {
-      const response = await fetch(`${API}/projects/${projectId}`, {
+      const response = await authFetch(`${API}/projects/${projectId}`, {
         method: "DELETE",
-        credentials: "include",
       });
 
       if (response.ok) {
@@ -135,13 +129,11 @@ export default function Dashboard({ user }) {
 
   const handleLogout = async () => {
     try {
-      await fetch(`${API}/auth/logout`, {
-        method: "POST",
-        credentials: "include",
-      });
+      await authFetch(`${API}/auth/logout`, { method: "POST" });
+      clearToken();
       navigate("/");
     } catch (error) {
-      console.error("Logout error:", error);
+      clearToken();
       navigate("/");
     }
   };
