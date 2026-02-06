@@ -232,13 +232,13 @@ async def create_session(request: SessionRequest, response: Response):
         value=session_token,
         httponly=True,
         secure=True,
-        samesite="none",
+        samesite="lax",
         path="/",
         max_age=7 * 24 * 60 * 60
     )
     
     user_response = await db.users.find_one({"user_id": user_id}, {"_id": 0})
-    return user_response
+    return {**user_response, "session_token": session_token}
 
 @api_router.get("/auth/me")
 async def get_me(user: User = Depends(get_current_user)):
