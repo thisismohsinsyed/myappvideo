@@ -22,9 +22,7 @@ export default function LandingPage() {
     // Check if already authenticated
     const checkAuth = async () => {
       try {
-        const response = await fetch(`${API}/auth/me`, {
-          credentials: "include",
-        });
+        const response = await authFetch(`${API}/auth/me`);
         if (response.ok) {
           navigate("/dashboard");
         }
