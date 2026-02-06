@@ -1038,38 +1038,68 @@ async def approve_scenes(project_id: str, request: SceneApprovalRequest, user: U
 
 @api_router.post("/projects/{project_id}/assemble")
 async def assemble_final_video(project_id: str, user: User = Depends(get_current_user)):
-    """Assemble all APPROVED scene videos into final video"""
-    if not user.gemini_api_key:
-        raise HTTPException(status_code=400, detail="API key not set")
-    
+    """Assemble all APPROVED scene videos into final video using ffmpeg"""
     project = await db.projects.find_one(
         {"project_id": project_id, "user_id": user.user_id},
         {"_id": 0}
     )
-    
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # Only assemble APPROVED videos
     scenes = await db.scenes.find(
         {"project_id": project_id, "video_status": "completed", "video_approved": True},
         {"_id": 0}
     ).sort("scene_number", 1).to_list(100)
     
     if not scenes:
-        raise HTTPException(status_code=400, detail="No approved video clips to assemble. Please approve video clips first.")
+        raise HTTPException(status_code=400, detail="No approved video clips to assemble.")
     
-    # Calculate total duration (10 seconds per scene)
-    total_duration = len(scenes) * 10
+    project_dir = VIDEOS_DIR / project_id
+    project_dir.mkdir(exist_ok=True)
     
-    # Update project status
+    # Build ffmpeg concat file
+    list_path = project_dir / "filelist.txt"
+    valid_scenes = []
+    with open(list_path, "w") as f:
+        for scene in scenes:
+            video_path = project_dir / f"{scene['scene_id']}.mp4"
+            if video_path.exists():
+                f.write(f"file '{video_path}'\n")
+                valid_scenes.append(scene)
+    
+    if not valid_scenes:
+        raise HTTPException(status_code=400, detail="No video files found on disk for approved scenes.")
+    
+    output_path = project_dir / "final.mp4"
+    
+    # Run ffmpeg to concatenate
+    proc = await asyncio.create_subprocess_exec(
+        "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+        "-i", str(list_path), "-c", "copy", str(output_path),
+        stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+    )
+    stdout, stderr = await proc.communicate()
+    
+    if proc.returncode != 0:
+        logger.error(f"ffmpeg merge error: {stderr.decode()}")
+        # Try re-encoding if concat copy fails
+        proc2 = await asyncio.create_subprocess_exec(
+            "ffmpeg", "-y", "-f", "concat", "-safe", "0",
+            "-i", str(list_path),
+            "-c:v", "libx264", "-preset", "fast", "-crf", "23",
+            "-c:a", "aac", "-b:a", "128k",
+            str(output_path),
+            stdout=asyncio.subprocess.PIPE, stderr=asyncio.subprocess.PIPE
+        )
+        stdout2, stderr2 = await proc2.communicate()
+        if proc2.returncode != 0:
+            logger.error(f"ffmpeg re-encode error: {stderr2.decode()}")
+            raise HTTPException(status_code=500, detail="Failed to merge videos")
+    
     await db.projects.update_one(
         {"project_id": project_id},
         {"$set": {
             "status": "completed",
-            "final_video_url": f"/api/projects/{project_id}/final-video",
-            "final_video_scenes": len(scenes),
-            "final_video_duration": total_duration,
             "updated_at": datetime.now(timezone.utc).isoformat()
         }}
     )
@@ -1077,11 +1107,17 @@ async def assemble_final_video(project_id: str, user: User = Depends(get_current
     return {
         "success": True,
         "project_id": project_id,
-        "scenes_count": len(scenes),
-        "total_duration": total_duration,
-        "message": f"Final video assembled from {len(scenes)} approved clips ({total_duration} seconds total).",
+        "scenes_count": len(valid_scenes),
         "download_url": f"/api/projects/{project_id}/final-video"
     }
+
+@api_router.get("/projects/{project_id}/final-video")
+async def get_final_video(project_id: str, user: User = Depends(get_current_user)):
+    """Serve the assembled final video"""
+    video_path = VIDEOS_DIR / project_id / "final.mp4"
+    if not video_path.exists():
+        raise HTTPException(status_code=404, detail="Final video not assembled yet")
+    return FileResponse(str(video_path), media_type="video/mp4", filename="final_video.mp4")
 
 @api_router.get("/projects/{project_id}/status")
 async def get_project_status(project_id: str, user: User = Depends(get_current_user)):
