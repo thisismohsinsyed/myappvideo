@@ -859,7 +859,7 @@ async def generate_all_images(project_id: str, user: User = Depends(get_current_
 
 @api_router.post("/projects/{project_id}/scenes/{scene_id}/generate-video")
 async def generate_scene_video(project_id: str, scene_id: str, user: User = Depends(get_current_user)):
-    """Generate video for a scene using Veo 2 API"""
+    """Generate video for a scene using Veo API"""
     if not user.gemini_api_key:
         raise HTTPException(status_code=400, detail="API key not set")
     
@@ -867,7 +867,6 @@ async def generate_scene_video(project_id: str, scene_id: str, user: User = Depe
         {"project_id": project_id, "user_id": user.user_id},
         {"_id": 0}
     )
-    
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
@@ -875,14 +874,8 @@ async def generate_scene_video(project_id: str, scene_id: str, user: User = Depe
         {"scene_id": scene_id, "project_id": project_id},
         {"_id": 0}
     )
-    
     if not scene:
         raise HTTPException(status_code=404, detail="Scene not found")
-    
-    # Check if image exists
-    image_data = scene.get("image_full_data")
-    if not image_data and not scene.get("image_generated"):
-        raise HTTPException(status_code=400, detail="Generate image first before video")
     
     # Update status to generating
     await db.scenes.update_one(
@@ -893,124 +886,89 @@ async def generate_scene_video(project_id: str, scene_id: str, user: User = Depe
     try:
         from google import genai
         from google.genai import types
-        import time
         
-        # Initialize the Genai client
         client = genai.Client(api_key=user.gemini_api_key)
         
-        # Create prompt for video generation
-        video_prompt = f"""Create a cinematic video animation for this scene:
-        
-Scene Description: {scene.get('description', '')}
+        # Build video prompt from scene data
+        video_prompt = f"""Create a cinematic video for this scene:
+
+Scene: {scene.get('description', '')}
 Setting: {scene.get('setting', '')}
 Action: {scene.get('action_summary', '')}
 
-Style: Smooth cinematic motion, professional film quality, maintain character consistency.
-Duration: 8 seconds of fluid animation."""
+Style: Smooth cinematic motion, professional film quality, consistent characters."""
 
-        # Start video generation with Veo model
-        logger.info(f"Starting video generation for scene {scene_id}")
+        logger.info(f"Starting Veo video generation for scene {scene_id}")
         
         operation = client.models.generate_videos(
             model="veo-2.0-generate-preview",
             prompt=video_prompt,
             config=types.GenerateVideosConfig(
                 aspect_ratio="16:9",
-                number_of_videos=1
+                number_of_videos=1,
             )
         )
         
-        # Poll for completion (with timeout)
-        max_wait = 300  # 5 minutes max
+        # Poll for completion
+        max_wait = 300
         wait_time = 0
-        poll_interval = 10
-        
         while not operation.done and wait_time < max_wait:
-            await asyncio.sleep(poll_interval)
-            wait_time += poll_interval
-            operation = client.operations.get(operation.name)
-            logger.info(f"Video generation progress for {scene_id}: waiting {wait_time}s")
+            await asyncio.sleep(10)
+            wait_time += 10
+            operation = client.operations.get(operation)
+            logger.info(f"Video gen progress for {scene_id}: {wait_time}s elapsed")
         
         if not operation.done:
+            await db.scenes.update_one({"scene_id": scene_id}, {"$set": {"video_status": "failed"}})
             raise HTTPException(status_code=504, detail="Video generation timed out")
         
-        # Get the generated video
         if operation.response and operation.response.generated_videos:
             generated_video = operation.response.generated_videos[0]
             
-            # Download the video
-            video_file = client.files.download(file=generated_video.video)
-            video_data = base64.b64encode(video_file.read()).decode('utf-8')
+            # Save video to disk
+            project_dir = VIDEOS_DIR / project_id
+            project_dir.mkdir(exist_ok=True)
+            video_path = project_dir / f"{scene_id}.mp4"
+            generated_video.video.save(str(video_path))
             
-            # Update scene with video data
+            logger.info(f"Video saved for scene {scene_id} at {video_path}")
+            
             await db.scenes.update_one(
                 {"scene_id": scene_id},
                 {"$set": {
                     "video_status": "completed",
-                    "video_data": video_data,
+                    "video_file": str(video_path),
                     "video_url": f"/api/projects/{project_id}/scenes/{scene_id}/video"
                 }}
             )
             
-            logger.info(f"Video generated successfully for scene {scene_id}")
-            
-            return {
-                "success": True,
-                "scene_id": scene_id,
-                "video_status": "completed",
-                "video_data": video_data
-            }
+            return {"success": True, "scene_id": scene_id, "video_status": "completed"}
         else:
+            await db.scenes.update_one({"scene_id": scene_id}, {"$set": {"video_status": "failed"}})
             raise HTTPException(status_code=500, detail="No video generated from API")
         
     except ImportError:
-        logger.warning("google-genai not installed, using fallback")
-        # Fallback: Store a marker that video was "generated"
-        await db.scenes.update_one(
-            {"scene_id": scene_id},
-            {"$set": {
-                "video_status": "completed",
-                "video_url": f"/api/projects/{project_id}/scenes/{scene_id}/video"
-            }}
-        )
-        return {
-            "success": True,
-            "scene_id": scene_id,
-            "video_status": "completed",
-            "message": "Video generation simulated (google-genai not available)"
-        }
+        logger.error("google-genai library not available")
+        await db.scenes.update_one({"scene_id": scene_id}, {"$set": {"video_status": "failed"}})
+        raise HTTPException(status_code=500, detail="Video generation library not available. Install google-genai.")
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Video generation error: {e}")
-        await db.scenes.update_one(
-            {"scene_id": scene_id},
-            {"$set": {"video_status": "failed"}}
-        )
+        await db.scenes.update_one({"scene_id": scene_id}, {"$set": {"video_status": "failed"}})
         raise HTTPException(status_code=500, detail=f"Video generation failed: {str(e)}")
 
 @api_router.get("/projects/{project_id}/scenes/{scene_id}/video")
 async def get_scene_video(project_id: str, scene_id: str, user: User = Depends(get_current_user)):
-    """Get the generated video for a scene"""
-    scene = await db.scenes.find_one(
-        {"scene_id": scene_id, "project_id": project_id},
-        {"_id": 0}
-    )
-    
-    if not scene:
-        raise HTTPException(status_code=404, detail="Scene not found")
-    
-    video_data = scene.get("video_data")
-    if not video_data:
+    """Serve the generated video file for a scene"""
+    video_path = VIDEOS_DIR / project_id / f"{scene_id}.mp4"
+    if not video_path.exists():
         raise HTTPException(status_code=404, detail="Video not generated yet")
-    
-    return {
-        "scene_id": scene_id,
-        "video_data": video_data,
-        "video_status": scene.get("video_status", "unknown")
-    }
+    return FileResponse(str(video_path), media_type="video/mp4", filename=f"scene_{scene_id}.mp4")
 
 @api_router.post("/projects/{project_id}/generate-all-videos")
 async def generate_all_videos(project_id: str, user: User = Depends(get_current_user)):
-    """Generate videos for all APPROVED scenes only"""
+    """Generate videos for all APPROVED scenes"""
     if not user.gemini_api_key:
         raise HTTPException(status_code=400, detail="API key not set")
     
@@ -1018,18 +976,16 @@ async def generate_all_videos(project_id: str, user: User = Depends(get_current_
         {"project_id": project_id, "user_id": user.user_id},
         {"_id": 0}
     )
-    
     if not project:
         raise HTTPException(status_code=404, detail="Project not found")
     
-    # Only get scenes with APPROVED images
     scenes = await db.scenes.find(
         {"project_id": project_id, "image_generated": True, "image_approved": True},
         {"_id": 0}
     ).sort("scene_number", 1).to_list(100)
     
     if not scenes:
-        raise HTTPException(status_code=400, detail="No approved images to generate videos from. Please approve scene images first.")
+        raise HTTPException(status_code=400, detail="No approved images to generate videos from.")
     
     results = []
     for scene in scenes:
@@ -1039,7 +995,6 @@ async def generate_all_videos(project_id: str, user: User = Depends(get_current_
         except Exception as e:
             results.append({"scene_id": scene["scene_id"], "success": False, "error": str(e)})
     
-    # Update project status
     await db.projects.update_one(
         {"project_id": project_id},
         {"$set": {"status": "videos_generated", "updated_at": datetime.now(timezone.utc).isoformat()}}
