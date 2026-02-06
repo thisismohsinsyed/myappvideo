@@ -23,7 +23,7 @@ import {
   Trash2
 } from "lucide-react";
 import { toast } from "sonner";
-import { API } from "@/App";
+import { API, authFetch } from "@/utils/api";
 
 export default function ApiKeySetup({ user }) {
   const navigate = useNavigate();

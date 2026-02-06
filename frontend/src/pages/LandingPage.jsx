@@ -12,7 +12,7 @@ import {
   ArrowRight,
   Check
 } from "lucide-react";
-import { API } from "@/App";
+import { API, authFetch } from "@/utils/api";
 
 export default function LandingPage() {
   const navigate = useNavigate();

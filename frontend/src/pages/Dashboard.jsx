@@ -31,7 +31,7 @@ import {
   AlertCircle
 } from "lucide-react";
 import { toast } from "sonner";
-import { API } from "@/App";
+import { API, authFetch, clearToken } from "@/utils/api";
 
 export default function Dashboard({ user }) {
   const navigate = useNavigate();
