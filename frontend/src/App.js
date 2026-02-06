@@ -9,15 +9,17 @@ import ApiKeySetup from "@/pages/ApiKeySetup";
 import ProjectEditor from "@/pages/ProjectEditor";
 import SceneManager from "@/pages/SceneManager";
 
+// Utils
+import { API, authFetch, setToken, clearToken, getToken } from "@/utils/api";
+
 // Components
 import { Toaster } from "@/components/ui/sonner";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-export const API = `${BACKEND_URL}/api`;
+// Re-export API for backward compat
+export { API };
 
-// Auth Context - Simple global state for user
+// Global user state
 let globalUser = null;
-let globalSetUser = null;
 
 // Auth Callback Component
 const AuthCallback = () => {
@@ -46,10 +48,15 @@ const AuthCallback = () => {
         });
 
         if (response.ok) {
-          const user = await response.json();
-          globalUser = user;
-          if (globalSetUser) globalSetUser(user);
-          // Clear hash and go to dashboard
+          const data = await response.json();
+          // Store the session token in localStorage
+          if (data.session_token) {
+            setToken(data.session_token);
+          }
+          // Set global user (strip session_token from user object)
+          const { session_token, ...userData } = data;
+          globalUser = userData;
+          // Clear hash and navigate
           window.history.replaceState(null, "", "/dashboard");
           navigate("/dashboard", { replace: true });
         } else {
@@ -80,33 +87,22 @@ const ProtectedRoute = ({ children }) => {
   const [user, setUser] = useState(globalUser);
   const navigate = useNavigate();
 
-  // Store setter globally for AuthCallback to use
   useEffect(() => {
-    globalSetUser = (u) => {
-      setUser(u);
-      setIsAuthenticated(true);
-    };
-    return () => { globalSetUser = null; };
-  }, []);
-
-  useEffect(() => {
-    // Skip if already authenticated via global state
     if (globalUser) {
       setUser(globalUser);
       setIsAuthenticated(true);
       return;
     }
 
-    // Skip auth check if hash has session_id (AuthCallback will handle)
+    // Skip if hash has session_id (AuthCallback handles it)
     if (window.location.hash.includes("session_id=")) {
       return;
     }
 
     const checkAuth = async () => {
       try {
-        const response = await fetch(`${API}/auth/me`, {
-          credentials: "include",
-        });
+        // Use authFetch which sends Bearer token from localStorage
+        const response = await authFetch(`${API}/auth/me`);
 
         if (response.ok) {
           const userData = await response.json();
@@ -114,10 +110,12 @@ const ProtectedRoute = ({ children }) => {
           setUser(userData);
           setIsAuthenticated(true);
         } else {
+          clearToken();
           setIsAuthenticated(false);
           navigate("/", { replace: true });
         }
       } catch (error) {
+        clearToken();
         setIsAuthenticated(false);
         navigate("/", { replace: true });
       }
@@ -143,7 +141,6 @@ const ProtectedRoute = ({ children }) => {
 
 // Main Router
 const AppRouter = () => {
-  // Check for session_id in hash immediately
   if (window.location.hash.includes("session_id=")) {
     return <AuthCallback />;
   }
